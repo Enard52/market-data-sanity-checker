@@ -13,7 +13,7 @@ pnpm calibrate   # 50-symbol calibration run against real Yahoo data → calibra
 pnpm scoreboard  # provider audit over ~30 liquid symbols → scoreboard/
 ```
 
-Requires Node.js ≥ 20 and pnpm (see `engines` and `packageManager` in `package.json`).
+Requires Node.js ≥ 22.12 and pnpm (see `engines` and `packageManager` in `package.json`).
 
 ## Your first rule
 
