@@ -11,7 +11,7 @@
 > **Trust layer for market data.** Validate, score and explain anomalies in OHLCV, dividends,
 > splits and fundamentals — before they break your screener, dashboard or tracker.
 
-<img src="docs/assets/trust-layer-flow.svg" alt="Architecture: market data sources (Yahoo Finance, Alpha Vantage, your CSV/JSON) flow into mdsc — the trust layer that validates with 36 rules, scores 0-100, explains with evidence and recommends block/flag/review — and only then into your backtests, screeners, dashboards and ML pipelines, with CI gating via exit codes" width="860">
+<img src="docs/assets/trust-layer-flow.svg" alt="Architecture: market data sources (Yahoo Finance, Alpha Vantage, your CSV/JSON) flow into mdsc — the trust layer that validates with 37 rules, scores 0-100, explains with evidence and recommends block/flag/review — and only then into your backtests, screeners, dashboards and ML pipelines, with CI gating via exit codes" width="860">
 
 - [Quickstart](#quickstart-30-seconds)
 - [Why this exists](#why-this-exists)
@@ -241,7 +241,7 @@ zero; the finding carries `occurrences` instead.
 
 ## Rule catalog
 
-The corpus ships **36 rules**: 29 single-source across four blocks, plus 7 multi-source
+The corpus ships **37 rules**: 29 single-source across four blocks, plus 8 multi-source
 compare rules. Full details with defaults and references: `mdsc rules` (or
 `--format json`). Real-case fixtures anchor the headline rules:
 [`tests/fixtures/`](tests/fixtures/), documented in [`docs/fixtures.md`](docs/fixtures.md).
@@ -295,12 +295,13 @@ compare rules. Full details with defaults and references: `mdsc rules` (or
 | `SYMBOL_MAPPING_SUSPECT` | warning | ISIN checksum invalid; ISIN country inconsistent with exchange (ticker reuse) |
 | `DIVIDEND_FX_MISMATCH` | warning | Dividend currency differs from the series currency (Shell pays USD, trades GBX) |
 
-### Compare (multi-source, 7)
+### Compare (multi-source, 8)
 
 | Rule | Severity | What it catches |
 |---|---|---|
 | `SYMBOL_MISMATCH` | critical | The two datasets are for different symbols — comparison is meaningless |
 | `INSUFFICIENT_OVERLAP` | warning | Too few shared dates between sources — agreement cannot be evaluated |
+| `SERIES_TAIL_TRUNCATED` | warning | One source ends sessions before the other — its most recent bars are missing |
 | `CLOSE_DIVERGENCE` | warning | Systematic close disagreement between two sources |
 | `DIVIDEND_MISMATCH` | warning | Dividend missing or different in the other source |
 | `SPLIT_MISMATCH` | warning | Split missing or with a different ratio in the other source (phantom-crash factory) |
@@ -352,7 +353,7 @@ when the gate fails (0 pass, 2 operational error) — drop it into any pipeline.
 
 **How is this different from Great Expectations or Pandera?**
 Those are generic, structure-first validators (nulls, ranges, schemas) you configure
-yourself. `mdsc` is domain-first: it ships 36 rules that understand market-data semantics —
+yourself. `mdsc` is domain-first: it ships 37 rules that understand market-data semantics —
 splits, dividends, pence/pounds, ticker reuse — each with a causal explanation, evidence,
 a literature or incident reference, and a tunable severity, plus multi-source comparison.
 

@@ -1,6 +1,7 @@
 import type { CompareRule } from './types'
 import { symbolMismatch } from './rules/symbol-mismatch'
 import { insufficientOverlap } from './rules/insufficient-overlap'
+import { seriesTailTruncated } from './rules/series-tail-truncated'
 import { closeDivergence } from './rules/close-divergence'
 import { priceDateMismatch } from './rules/price-date-mismatch'
 import { dividendMismatch } from './rules/dividend-mismatch'
@@ -11,6 +12,7 @@ import { volumeDivergence } from './rules/volume-divergence'
 export const compareRegistry: CompareRule[] = [
   symbolMismatch,
   insufficientOverlap,
+  seriesTailTruncated,
   closeDivergence,
   priceDateMismatch,
   dividendMismatch,
