@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { access, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,6 +20,15 @@ const CLI = join(REPO_ROOT, 'dist', 'cli.js')
 const fixture = (name: string) => join(REPO_ROOT, 'tests', 'fixtures', name)
 
 const CLI_TIMEOUT_MS = 30_000
+
+async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'mdsc-cli-'))
+  try {
+    await run(dir)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
 
 interface CliResult {
   code: number
@@ -108,6 +117,55 @@ describe('check — gating exit codes', () => {
     async () => {
       const result = await runCli(['check', '--file', fixture('aet-l-currency-scale.json'), '--min-score', '80'])
       expect(result.code).toBe(0)
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'prints parseable JSON for the anomalous golden-path fixture before exiting 1',
+    async () => {
+      await withTempDir(async (dir) => {
+        const jsonPath = join(dir, 'report.json')
+        const result = await runCli(
+          ['check', '--file', fixture('mob-st-unadjusted-split.json'), '--format', 'json'],
+          { cwd: dir },
+        )
+
+        expect(result.code).toBe(1)
+        await writeFile(jsonPath, result.stdout, 'utf8')
+        const report = JSON.parse(await readFile(jsonPath, 'utf8')) as {
+          symbol?: unknown
+          findings?: unknown
+        }
+        expect(report.symbol).toBe('MOB.ST')
+        expect(Array.isArray(report.findings)).toBe(true)
+        expect(await readdir(dir)).toEqual(['report.json'])
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'writes a non-empty self-contained HTML report for the anomalous golden-path fixture',
+    async () => {
+      await withTempDir(async (dir) => {
+        const htmlPath = join(dir, 'report.html')
+        const result = await runCli(
+          ['check', '--file', fixture('mob-st-unadjusted-split.json'), '--html', htmlPath],
+          { cwd: dir },
+        )
+
+        expect(result.code).toBe(1)
+        expect(result.stderr).toContain('HTML dashboard written')
+        const html = await readFile(htmlPath, 'utf8')
+        expect(html.length).toBeGreaterThan(0)
+        expect(html).not.toContain('<script src')
+        expect(html).not.toContain('<link')
+        const withoutHrefs = html.replace(/href="[^"]*"/g, '')
+        expect(withoutHrefs).not.toContain('http://')
+        expect(withoutHrefs).not.toContain('https://')
+        expect(await readdir(dir)).toEqual(['report.html'])
+      })
     },
     CLI_TIMEOUT_MS,
   )

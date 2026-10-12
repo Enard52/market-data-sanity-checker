@@ -4,6 +4,35 @@ Every example below is reproducible: the inputs ship in [`tests/fixtures/`](../t
 (documented in [fixtures.md](fixtures.md)) and the outputs are the actual CLI text. No API key
 needed for any of them.
 
+## Golden path: local files to JSON and HTML
+
+This path stays entirely local: both inputs ship with the repository, and none of the commands
+needs an API key or network access. Start with the clean CSV; a successful gate prints the report
+and exits `0`:
+
+```bash
+mdsc check --file tests/fixtures/ohlcv-valid.csv
+```
+
+Then check the anomalous JSON fixture. Its critical finding makes the gate exit `1`:
+
+```bash
+mdsc check --file tests/fixtures/mob-st-unadjusted-split.json
+```
+
+The report is still produced before the gate exits. Redirect JSON output to a file, or ask the CLI
+to write the self-contained HTML dashboard directly:
+
+```bash
+mdsc check --file tests/fixtures/mob-st-unadjusted-split.json --format json > report.json
+mdsc check --file tests/fixtures/mob-st-unadjusted-split.json --html report.html
+```
+
+Both commands above intentionally exit `1` because the fixture contains a critical anomaly; that
+status means the data gate worked, not that report generation failed. `report.json` is ordinary
+parseable JSON. `report.html` is a non-empty, self-contained file that opens locally without a
+server.
+
 ## 1. The phantom −50% crash (unadjusted split)
 
 MOB.ST (Moberg Pharma, Nasdaq Stockholm) registered a 2:1 split in April 2023 — but the
