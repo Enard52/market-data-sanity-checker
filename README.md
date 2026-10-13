@@ -1,6 +1,7 @@
 # market-data-sanity-checker
 
 [![CI](https://github.com/pacocartones/market-data-sanity-checker/actions/workflows/ci.yml/badge.svg)](https://github.com/pacocartones/market-data-sanity-checker/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pacocartones/market-data-sanity-checker/badge)](https://scorecard.dev/viewer/?uri=github.com/pacocartones/market-data-sanity-checker)
 [![npm version](https://img.shields.io/npm/v/market-data-sanity-checker)](https://www.npmjs.com/package/market-data-sanity-checker)
 [![npm downloads](https://img.shields.io/npm/dm/market-data-sanity-checker)](https://www.npmjs.com/package/market-data-sanity-checker)
 [![node version](https://img.shields.io/node/v/market-data-sanity-checker)](https://nodejs.org)
