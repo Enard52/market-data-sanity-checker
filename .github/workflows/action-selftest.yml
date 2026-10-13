@@ -53,6 +53,8 @@ jobs:
         with:
           file: tests/fixtures/berkshire-bad-tick.json
 
+      # A fixed published version: covers the npm install path without depending on
+      # whatever npm serves that day.
       - name: The published package installs and runs
         id: published
         uses: ./
@@ -60,7 +62,7 @@ jobs:
           MDSC_CLI: ""
         with:
           file: tests/fixtures/ohlcv-valid.csv
-          version: "1"
+          version: "1.5.2"
 
       - name: Assert outcomes and outputs
         shell: bash
