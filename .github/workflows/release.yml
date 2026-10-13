@@ -77,6 +77,7 @@ jobs:
       # Build dist/ upfront: publishing happens inside the changesets step below.
       - run: pnpm build
       - name: Create Version Packages PR or publish to npm
+        id: changesets
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           # v2 renamed the inputs (version -> version-script, publish ->
@@ -95,3 +96,15 @@ jobs:
           # anyway (its CHANGELOG, #695), and pnpm 11 prefers OIDC over any
           # static token when both exist.
           PNPM_CONFIG_PROVENANCE: "true"
+      # Rewrite the GitHub release changesets just created in the house format
+      # (RELEASING.md): title "vX.Y.Z — summary" and the fixed sections.
+      - name: Release notes in the house format
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          version=$(jq -r '.[0].version' <<<"$PUBLISHED")
+          pnpm -s release-notes build "$version" > notes.json
+          jq -r .body notes.json > notes.md
+          gh release edit "v$version" --title "$(jq -r .title notes.json)" --notes-file notes.md
