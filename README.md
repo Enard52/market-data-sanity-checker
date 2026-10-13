@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/pacocartones/market-data-sanity-checker/actions/workflows/ci.yml/badge.svg)](https://github.com/pacocartones/market-data-sanity-checker/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pacocartones/market-data-sanity-checker/badge)](https://scorecard.dev/viewer/?uri=github.com/pacocartones/market-data-sanity-checker)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Market%20Data%20Sanity%20Checker-blue?logo=github)](https://github.com/marketplace/actions/market-data-sanity-checker)
 [![npm version](https://img.shields.io/npm/v/market-data-sanity-checker)](https://www.npmjs.com/package/market-data-sanity-checker)
 [![npm downloads](https://img.shields.io/npm/dm/market-data-sanity-checker)](https://www.npmjs.com/package/market-data-sanity-checker)
 [![node version](https://img.shields.io/node/v/market-data-sanity-checker)](https://nodejs.org)
@@ -164,10 +165,10 @@ mdsc check --file aapl.csv --html report.html
 
 ### GitHub Action
 
-Fail a workflow when a data file is bad, with the score and finding counts in the job summary:
+Fail a workflow when a data file is bad, with the score and finding counts in the job summary. It is listed on the [GitHub Marketplace](https://github.com/marketplace/actions/market-data-sanity-checker).
 
 ```yaml
-- uses: pacocartones/market-data-sanity-checker@82384852eeca822f8cc2c25c6725a02ec9e864ed # v1
+- uses: pacocartones/market-data-sanity-checker@09917752cf236fe280e5d10c3c7ead07361c557c # v1.5.4
   with:
     file: data/prices.csv
     fail-on: warning # critical (default) | warning | info
