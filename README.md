@@ -166,12 +166,15 @@ mdsc check --file aapl.csv --html report.html
 Fail a workflow when a data file is bad, with the score and finding counts in the job summary:
 
 ```yaml
-- uses: pacocartones/market-data-sanity-checker@v1 # or pin a full commit SHA
+- uses: pacocartones/market-data-sanity-checker@82384852eeca822f8cc2c25c6725a02ec9e864ed # v1
   with:
     file: data/prices.csv
     fail-on: warning # critical (default) | warning | info
     min-score: "80" # optional
 ```
+
+Pin the full commit SHA, as above, rather than the moving `v1` tag: a tag can be moved, a SHA
+cannot. The `v1` tag follows the latest 1.x release of the action.
 
 Inputs: `file` (required), `fail-on`, `min-score`, `symbol`, `source`, `html` (also write the
 dashboard), `version` (npm version to run, default `1`) and `setup-node` (default `true`,
