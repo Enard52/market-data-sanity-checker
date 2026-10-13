@@ -104,9 +104,11 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+          # changesets/action v2 names this output published-packages (v1: publishedPackages).
+          PUBLISHED: ${{ steps.changesets.outputs.published-packages }}
         run: |
-          version=$(jq -r '.[0].version' <<<"$PUBLISHED")
+          version=$(jq -r '.[0].version // empty' <<<"$PUBLISHED")
+          [ -n "$version" ] || { echo "::error::no published version in the changesets output"; exit 1; }
           pnpm -s release-notes build "$version" > notes.json
           jq -r .body notes.json > notes.md
           gh release edit "v$version" --title "$(jq -r .title notes.json)" --notes-file notes.md
