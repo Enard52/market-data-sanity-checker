@@ -6,10 +6,8 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions:
-  contents: write # push the "Version Packages" commit and create GitHub releases
-  pull-requests: write # open/update the "Version Packages" PR
-  id-token: write # OIDC: npm trusted publishing and the provenance attestation
+# No permissions at workflow level; each job asks for what it needs.
+permissions: {}
 
 jobs:
   # Decides, without any environment or credentials, whether there is anything to
@@ -55,6 +53,10 @@ jobs:
     # too, so a run outside it cannot publish.
     environment: release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the "Version Packages" commit, create and edit GitHub releases
+      pull-requests: write # open/update the "Version Packages" PR
+      id-token: write # OIDC: npm trusted publishing and the provenance attestation
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
