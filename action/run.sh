@@ -11,7 +11,13 @@ file=${MDSC_FILE:-}
 [ -n "$file" ] || die "the 'file' input is required"
 [ -f "$file" ] || die "file not found: $file"
 
-version=${MDSC_VERSION:-1}
+# Default: the exact package version released with this ref of the action, so a
+# tag always runs the same code. A major or major.minor in 'version' opts into updates.
+version=${MDSC_VERSION:-}
+if [ -z "$version" ]; then
+  version=$(jq -r '.version // empty' "$(dirname "$0")/../package.json" 2>/dev/null)
+  [ -n "$version" ] || die "could not read the package version from the action's package.json"
+fi
 [[ $version =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] || die "'version' must be a major, major.minor or exact version, got: $version"
 
 args=(check --file "$file" --format json)
@@ -29,6 +35,7 @@ fi
 [ -z "${MDSC_HTML:-}" ] || args+=(--html "$MDSC_HTML")
 
 tmp="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+echo "mdsc: market-data-sanity-checker@$version"
 if [ -n "${MDSC_CLI:-}" ]; then
   read -r -a cli <<<"$MDSC_CLI"
 else

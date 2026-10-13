@@ -30,9 +30,9 @@ inputs:
     required: false
     default: ""
   version:
-    description: Version of the market-data-sanity-checker npm package to run (major, major.minor or exact)
+    description: Version of the market-data-sanity-checker npm package to run (major, major.minor or exact). Default is the exact version released with this ref of the action.
     required: false
-    default: "1"
+    default: ""
   setup-node:
     description: Install Node.js 22 with actions/setup-node. Set to false if the job already provides Node >= 22.12.
     required: false
