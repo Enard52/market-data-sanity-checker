@@ -1,5 +1,11 @@
 # market-data-sanity-checker
 
+## 1.5.4
+
+### Patch Changes
+
+- dad0627: GitHub Action: a clearer name and description for the GitHub Marketplace listing ("Market Data Sanity Checker"), and an `activity` icon. Inputs, outputs and behaviour are unchanged.
+
 ## 1.5.3
 
 ### Patch Changes
