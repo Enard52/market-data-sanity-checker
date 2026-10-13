@@ -22,10 +22,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    # The action runs the CLI built from this checkout, not the npm release: by default
+    # a ref of the action installs the exact version in its package.json, which a
+    # Version Packages PR bumps before that version exists on npm.
+    env:
+      MDSC_CLI: node dist/cli.js
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
       - name: Clean data passes
         id: clean
@@ -41,6 +53,17 @@ jobs:
         with:
           file: tests/fixtures/berkshire-bad-tick.json
 
+      # A fixed published version: covers the npm install path without depending on
+      # whatever npm serves that day.
+      - name: The published package installs and runs
+        id: published
+        uses: ./
+        env:
+          MDSC_CLI: ""
+        with:
+          file: tests/fixtures/ohlcv-valid.csv
+          version: "1.5.2"
+
       - name: Assert outcomes and outputs
         shell: bash
         env:
@@ -49,6 +72,7 @@ jobs:
           BAD_OUTCOME: ${{ steps.bad.outcome }}
           BAD_CRITICAL: ${{ steps.bad.outputs.critical }}
           BAD_REPORT: ${{ steps.bad.outputs.report }}
+          PUBLISHED_SCORE: ${{ steps.published.outputs.score }}
         run: |
           set -u
           test "$CLEAN_SCORE" = 80
@@ -56,4 +80,5 @@ jobs:
           test "$BAD_OUTCOME" = failure
           test "$BAD_CRITICAL" = 1
           test -s "$BAD_REPORT"
+          test -n "$PUBLISHED_SCORE"
           echo "self-test passed"
