@@ -28,13 +28,20 @@ fi
 [ -z "${MDSC_SOURCE:-}" ] || args+=(--source "$MDSC_SOURCE")
 [ -z "${MDSC_HTML:-}" ] || args+=(--html "$MDSC_HTML")
 
+tmp="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 if [ -n "${MDSC_CLI:-}" ]; then
   read -r -a cli <<<"$MDSC_CLI"
 else
-  cli=(npx --yes "market-data-sanity-checker@$version")
+  # Install into a private prefix rather than npx: run from a checkout of this
+  # repository (or any package with the same name), npx would resolve the local
+  # package instead of the published one.
+  prefix="$tmp/mdsc-$version"
+  npm install --prefix "$prefix" --no-save --no-audit --no-fund --loglevel=error \
+    "market-data-sanity-checker@$version" >&2 || die "npm install market-data-sanity-checker@$version failed"
+  cli=(node "$prefix/node_modules/market-data-sanity-checker/dist/cli.js")
 fi
 
-report="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/mdsc-report.json"
+report="$tmp/mdsc-report.json"
 "${cli[@]}" "${args[@]}" >"$report"
 code=$?
 
