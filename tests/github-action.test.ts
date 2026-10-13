@@ -118,6 +118,17 @@ describe.skipIf(process.platform === 'win32')('GitHub Action wrapper', () => {
     TIMEOUT_MS,
   )
 
+  it(
+    'defaults to the exact package version of this ref, and accepts an explicit one',
+    async () => {
+      const pkg = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf8')) as { version: string }
+      const clean = fixture('ohlcv-valid.csv')
+      expect((await runAction({ MDSC_FILE: clean })).stdout).toContain(`market-data-sanity-checker@${pkg.version}\n`)
+      expect((await runAction({ MDSC_FILE: clean, MDSC_VERSION: '1' })).stdout).toContain('market-data-sanity-checker@1\n')
+    },
+    TIMEOUT_MS,
+  )
+
   it.each([
     [{ MDSC_FILE: '' }, "'file' input is required"],
     [{ MDSC_FILE: 'missing.csv' }, 'file not found'],

@@ -178,7 +178,7 @@ Pin the full commit SHA, as above, rather than the moving `v1` tag: a tag can be
 cannot. The `v1` tag follows the latest 1.x release of the action.
 
 Inputs: `file` (required), `fail-on`, `min-score`, `symbol`, `source`, `html` (also write the
-dashboard), `version` (npm version to run, default `1`) and `setup-node` (default `true`,
+dashboard), `version` (npm version to run; default is the exact version released with the action ref you use, set a major such as `1` to follow updates) and `setup-node` (default `true`,
 installs Node 22). Outputs: `score`, `critical`, `warning`, `info` and `report` (path of the
 JSON report). Critical findings always fail the step; to report without failing the job, set
 `continue-on-error: true` on it.
