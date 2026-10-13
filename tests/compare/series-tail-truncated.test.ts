@@ -106,3 +106,37 @@ describe('SERIES_TAIL_TRUNCATED', () => {
     expect(seriesTailTruncated.check(a, b, ctxFor(a, b, { minMissingSessions: 26 }))).toEqual([])
   })
 })
+
+/**
+ * The three cases of examples/wrong_window.py in arian-gogani/nobulex-registry (MIT),
+ * shared in issue #35: five daily sessions from 2020-01-06 as the authority, and a
+ * subject that matches, stops two sessions early, or covers an entirely different window.
+ */
+describe('issue #35 wrong-window cases (nobulex-registry examples/wrong_window.py)', () => {
+  const AUTHORITY = ['2020-01-06', '2020-01-07', '2020-01-08', '2020-01-09', '2020-01-10']
+  const authority = dataset('authority', AUTHORITY)
+
+  it('matching window: the negative control, no truncation finding', () => {
+    const subject = dataset('subject', AUTHORITY)
+    const rules = runCompareRules(authority, subject).map((f) => f.rule)
+    expect(rules).not.toContain('SERIES_TAIL_TRUNCATED')
+  })
+
+  it('two sessions silently missing: names the two authority dates absent from the subject', () => {
+    const subject = dataset('subject', AUTHORITY.slice(0, 3))
+    const findings = runCompareRules(authority, subject).filter((f) => f.rule === 'SERIES_TAIL_TRUNCATED')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]!.evidence).toMatchObject({
+      truncated_source: 'subject',
+      missing_sessions: 2,
+      missing_dates: ['2020-01-09', '2020-01-10'],
+    })
+  })
+
+  it('same count, entirely different dates: nothing to compare, never reported as truncation', () => {
+    const subject = dataset('subject', ['1999-01-04', '1999-01-05', '1999-01-06', '1999-01-07', '1999-01-08'])
+    const findings = runCompareRules(authority, subject)
+    expect(findings.map((f) => f.rule)).not.toContain('SERIES_TAIL_TRUNCATED')
+    expect(findings.find((f) => f.rule === 'INSUFFICIENT_OVERLAP')).toMatchObject({ severity: 'critical' })
+  })
+})

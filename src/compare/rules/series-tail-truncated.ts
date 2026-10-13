@@ -28,7 +28,10 @@ export const seriesTailTruncated: CompareRule = {
       /** Missing dates listed in the evidence; the count is always complete. */
       maxListedDates: 20,
     },
-    references: ['https://github.com/pacocartones/market-data-sanity-checker/issues/35'],
+    references: [
+      'https://github.com/pacocartones/market-data-sanity-checker/issues/35',
+      'https://github.com/arian-gogani/nobulex-registry/blob/main/examples/wrong_window.py',
+    ],
   },
 
   check(a, b, context) {
