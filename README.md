@@ -161,6 +161,24 @@ mdsc history --symbol AAPL
 mdsc check --file aapl.csv --html report.html
 ```
 
+### GitHub Action
+
+Fail a workflow when a data file is bad, with the score and finding counts in the job summary:
+
+```yaml
+- uses: pacocartones/market-data-sanity-checker@v1 # or pin a full commit SHA
+  with:
+    file: data/prices.csv
+    fail-on: warning # critical (default) | warning | info
+    min-score: "80" # optional
+```
+
+Inputs: `file` (required), `fail-on`, `min-score`, `symbol`, `source`, `html` (also write the
+dashboard), `version` (npm version to run, default `1`) and `setup-node` (default `true`,
+installs Node 22). Outputs: `score`, `critical`, `warning`, `info` and `report` (path of the
+JSON report). Critical findings always fail the step; to report without failing the job, set
+`continue-on-error: true` on it.
+
 ### SDK
 
 ```ts
