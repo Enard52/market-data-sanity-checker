@@ -30,6 +30,8 @@ jobs:
           node-version: 24
           # No dependency cache: this workflow runs on release events, and a
           # cache written by another workflow must not reach it (zizmor cache-poisoning).
+          # setup-node caches by default when package.json declares packageManager.
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - name: Check the release notes
         env:
