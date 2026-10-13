@@ -437,6 +437,11 @@ come with the files to touch and the check to run.
 
 AI-assisted contributions are welcome. Use AI tools if they help you — we do too. We ask for good judgement: understand and test what you send, and check every fact at its source. See [AI_POLICY.md](AI_POLICY.md).
 
+## Support
+
+Questions and bug reports: [open an issue](https://github.com/pacocartones/market-data-sanity-checker/issues).
+Anything that can't go in a public issue: **admin@tweakeo.com**. Security reports follow [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE)
