@@ -1,5 +1,19 @@
 # market-data-sanity-checker
 
+## 1.4.0
+
+### Minor Changes
+
+- ff88160: New compare rule `SERIES_TAIL_TRUNCATED` (warning): when one source ends two or more sessions before the other, `mdsc compare` now reports it and names the missing dates. A long enough overlap used to hide this case: `INSUFFICIENT_OVERLAP` stayed silent and `BAR_MISSING` only sees gaps between bars, so a series cut short at its end still read as agreement. A different start date is not reported, and neither is a single missing latest session. Reported in #35. The catalog is now 37 rules.
+- cba43d5: `STALE_PRICE` no longer excuses every zero-volume run as a trading halt: a price frozen with volume 0 for more than `maxHaltSessions` (default 10, the longest summary suspension the SEC may order) is reported at `info`. Closes #59.
+
+### Patch Changes
+
+- 944a937: Connectors can now declare a daily request cap (`dailyRequestLimit`), and Alpha Vantage declares 25 for a free key (none with `ALPHA_VANTAGE_PREMIUM=true`). The weekly scoreboard stays under it: symbols over the cap are reported as skipped, not as failed, and the 20% quorum is judged on the symbols actually requested. Before this, the free key's 26th request onward was refused every week and 5 of 30 symbols counted as failures, one short of excluding the provider. The Alpha Vantage connector also stops telling you that a daily rate-limit Note "needs a premium key": only a premium-endpoint refusal gets that hint now.
+- 3855fff: Rule references: `TS_DUPLICATED` now cites the incident it guards against (yfinance #765, duplicated 2021-07-09 rows for DRREDDY.NS and HINDPETRO.NS). Before, it and `TS_UNORDERED` cited yfinance #902, which is about a missing hourly bar. `TS_UNORDERED` now cites yfinance's own defensive re-sort, until a documented vendor incident is found. Package metadata: the author is now `pacocartones`. Contributor docs: a first-rule tutorial, an AI policy, and a private contact for conduct and security reports.
+- b6a74f4: `mdsc rules` now prints the references of the compare rules too (they were in the catalog but not shown), and every one of the 36 rules cites at least one source: INSUFFICIENT_DATA, FUNDAMENTALS_SIGN_VALIDITY, SYMBOL_MISMATCH and INSUFFICIENT_OVERLAP gain references to the documented failures they guard against.
+- 53d542d: The weekly provider scoreboard now lists the symbols skipped because a provider's daily request cap was reached.
+
 ## 1.3.0
 
 ### Minor Changes
