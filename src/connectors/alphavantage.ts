@@ -39,6 +39,12 @@ function isPremium(): boolean {
   return process.env.ALPHA_VANTAGE_PREMIUM === 'true'
 }
 
+/**
+ * Requests per day a free key allows. Alpha Vantage answers request 26 with a "Note" instead of data
+ * (seen in the 2026-10-12 scoreboard run: 25 symbols fetched, the last 5 refused).
+ */
+export const FREE_DAILY_REQUEST_LIMIT = 25
+
 /** Provider keys that signal an error payload instead of data. */
 const ERROR_KEYS = ['Error Message', 'Note', 'Information'] as const
 
@@ -69,7 +75,9 @@ export function parseAlphaVantageDaily(payload: unknown, symbol: string): Market
   for (const key of ERROR_KEYS) {
     const message = root[key]
     if (typeof message === 'string' && message.length > 0) {
-      const hint = /premium/i.test(message)
+      // Only the premium-endpoint refusal gets the hint. The daily rate-limit Note also links to
+      // alphavantage.co/premium/, and appending the hint there sent the reader after the wrong cause.
+      const hint = /premium endpoint/i.test(message)
         ? ' (this endpoint needs a premium key; unset ALPHA_VANTAGE_PREMIUM to use the free endpoint)'
         : ''
       throw new ConnectorError(`Alpha Vantage returned "${key}" for ${symbol}: ${message}${hint}`)
@@ -135,6 +143,10 @@ export const alphaVantage: Connector = {
 
   available(): boolean {
     return Boolean(process.env.ALPHA_VANTAGE_API_KEY)
+  },
+
+  dailyRequestLimit(): number | undefined {
+    return isPremium() ? undefined : FREE_DAILY_REQUEST_LIMIT
   },
 
   async fetchDaily(symbol: string, options: FetchOptions = {}): Promise<MarketDataSet> {

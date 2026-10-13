@@ -50,4 +50,19 @@ export interface Connector {
   available(): boolean
   /** Fetches daily OHLCV (+ dividends/splits if the provider offers them) normalized to the schema. */
   fetchDaily(symbol: string, options?: FetchOptions): Promise<MarketDataSet>
+  /**
+   * Requests per day the provider allows with the current credentials, or undefined when there is no
+   * daily cap. Batch callers (the scoreboard) stay under it instead of turning the cap into failures.
+   */
+  dailyRequestLimit?(): number | undefined
+}
+
+/**
+ * Splits a batch of symbols into the ones a connector can fetch today and the ones over its daily cap.
+ * Order is kept, so the same basket always skips the same symbols. A limit of undefined means no cap.
+ */
+export function splitByDailyLimit<T>(items: readonly T[], limit: number | undefined): { attempt: T[]; skip: T[] } {
+  if (limit === undefined || !Number.isFinite(limit) || limit >= items.length) return { attempt: [...items], skip: [] }
+  const cut = Math.max(0, Math.floor(limit))
+  return { attempt: items.slice(0, cut), skip: items.slice(cut) }
 }

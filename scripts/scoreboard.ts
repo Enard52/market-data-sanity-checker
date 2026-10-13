@@ -22,6 +22,7 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { connectors, connectorStatus } from '../src/connectors/index'
+import { splitByDailyLimit } from '../src/connectors/types'
 import { checkMarketData } from '../src/checker'
 import { compareDatasets } from '../src/compare/comparator'
 import type { MarketDataSet } from '../src/schema/market-data'
@@ -44,6 +45,8 @@ interface ProviderResult {
   provider: string
   symbols_ok: number
   symbols_failed: number
+  /** Basket symbols not requested because they are over the provider's daily request cap. */
+  symbols_skipped: number
   mean_score: number
   min_score: number
   worst_symbols: Array<{ symbol: string; score: number; rules: string[] }>
@@ -89,8 +92,14 @@ for (const connector of active) {
   const failedSymbols: string[] = []
   const findingsCount: Record<string, number> = { critical: 0, warning: 0, info: 0 }
   let failed = 0
+  // Stay under the provider's daily cap: past it, every request is refused, and those refusals used to
+  // count as failures against the quorum (2026-10-12: alpha-vantage 25 ok, 5 refused by the free-key cap).
+  const { attempt, skip } = splitByDailyLimit(BASKET, connector.dailyRequestLimit?.())
+  if (skip.length > 0) {
+    console.log(`${connector.name}: ${skip.length} symbol(s) skipped, over its daily request cap: ${skip.join(', ')}`)
+  }
 
-  for (const symbol of BASKET) {
+  for (const symbol of attempt) {
     try {
       const data = await connector.fetchDaily(symbol, { range: '1y' })
       datasets.set(symbol, data)
@@ -116,10 +125,11 @@ for (const connector of active) {
     await sleep(pauseMs(connector.name))
   }
 
-  // Quorum guard: a provider that failed >20% of the basket publishes nothing.
-  if (failed / BASKET.length > 0.2) {
+  // Quorum guard: a provider that failed >20% of the symbols it requested publishes nothing.
+  // Symbols skipped for the daily cap were never requested, so they are not failures.
+  if (attempt.length === 0 || failed / attempt.length > 0.2) {
     console.error(
-      `${connector.name}: excluded, ${failed}/${BASKET.length} fetches failed (>20% quorum) — none of its numbers are published`,
+      `${connector.name}: excluded, ${failed}/${attempt.length} fetches failed (>20% quorum) — none of its numbers are published`,
     )
     excluded.push({ provider: connector.name, failed })
     datasetsByProvider.delete(connector.name)
@@ -139,12 +149,16 @@ for (const connector of active) {
   for (const symbol of failedSymbols) {
     symbolRows.push({ provider: connector.name, symbol, score: null, summary: null, rules: 'FETCH_FAILED' })
   }
+  for (const symbol of skip) {
+    symbolRows.push({ provider: connector.name, symbol, score: null, summary: null, rules: 'SKIPPED_DAILY_CAP' })
+  }
 
   const mean = scores.length > 0 ? scores.reduce((sum, entry) => sum + entry.score, 0) / scores.length : 0
   providerResults.push({
     provider: connector.name,
     symbols_ok: scores.length,
     symbols_failed: failed,
+    symbols_skipped: skip.length,
     mean_score: Number(mean.toFixed(1)),
     min_score: scores.length > 0 ? Math.min(...scores.map((entry) => entry.score)) : 0,
     // Strip summary: latest.json keeps its original shape.
@@ -197,7 +211,7 @@ const lines = [
   '|---|---|---|---|---|---|---|',
   ...providerResults.map(
     (result) =>
-      `| ${result.provider} | ${result.symbols_ok} (+${result.symbols_failed} failed) | ${result.mean_score} | ${result.min_score} | ${result.total_findings.critical} | ${result.total_findings.warning} | ${result.total_findings.info} |`,
+      `| ${result.provider} | ${result.symbols_ok} (+${result.symbols_failed} failed${result.symbols_skipped > 0 ? `, ${result.symbols_skipped} skipped: daily cap` : ''}) | ${result.mean_score} | ${result.min_score} | ${result.total_findings.critical} | ${result.total_findings.warning} | ${result.total_findings.info} |`,
   ),
   ...(excluded.length > 0
     ? [

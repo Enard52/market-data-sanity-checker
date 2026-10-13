@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { alphaVantage, parseAlphaVantageDaily } from '../src/connectors/alphavantage'
-import { ConnectorError, DEFAULT_TIMEOUT_MS } from '../src/connectors/types'
+import { alphaVantage, FREE_DAILY_REQUEST_LIMIT, parseAlphaVantageDaily } from '../src/connectors/alphavantage'
+import { ConnectorError, DEFAULT_TIMEOUT_MS, splitByDailyLimit } from '../src/connectors/types'
 import { marketDataSetSchema } from '../src/schema/market-data'
 
 const fixture = (name: string) =>
@@ -235,5 +235,45 @@ describe('alphaVantage — free vs premium endpoint', () => {
   it('explains a premium-endpoint Information payload', () => {
     const payload = { Information: 'Thank you for using Alpha Vantage! This is a premium endpoint.' }
     expect(() => parseAlphaVantageDaily(payload, 'IBM')).toThrow(/needs a premium key/)
+  })
+
+  it('does not blame the endpoint for the free-key daily rate limit', () => {
+    // The literal Note of the 2026-10-12 scoreboard run; it links to /premium/ but is a rate limit.
+    const payload = {
+      Note:
+        'We have detected your API key as TEST and our standard API rate limit is 25 requests per day. ' +
+        'Please visit https://www.alphavantage.co/premium/ if you would like to target a higher API call frequency.',
+    }
+    expect(() => parseAlphaVantageDaily(payload, 'GLD')).toThrow(/25 requests per day/)
+    expect(() => parseAlphaVantageDaily(payload, 'GLD')).not.toThrow(/needs a premium key/)
+  })
+
+  it('declares the free-key daily cap, and no cap with ALPHA_VANTAGE_PREMIUM=true', () => {
+    delete process.env.ALPHA_VANTAGE_PREMIUM
+    expect(alphaVantage.dailyRequestLimit?.()).toBe(FREE_DAILY_REQUEST_LIMIT)
+    expect(FREE_DAILY_REQUEST_LIMIT).toBe(25)
+    process.env.ALPHA_VANTAGE_PREMIUM = 'true'
+    expect(alphaVantage.dailyRequestLimit?.()).toBeUndefined()
+  })
+})
+
+describe('splitByDailyLimit', () => {
+  const BASKET = ['A', 'B', 'C', 'D', 'E']
+
+  it('attempts the first symbols up to the cap and skips the rest, in basket order', () => {
+    expect(splitByDailyLimit(BASKET, 3)).toEqual({ attempt: ['A', 'B', 'C'], skip: ['D', 'E'] })
+  })
+
+  it('attempts everything without a cap or when the cap covers the basket', () => {
+    expect(splitByDailyLimit(BASKET, undefined)).toEqual({ attempt: BASKET, skip: [] })
+    expect(splitByDailyLimit(BASKET, 5)).toEqual({ attempt: BASKET, skip: [] })
+    expect(splitByDailyLimit(BASKET, Number.POSITIVE_INFINITY)).toEqual({ attempt: BASKET, skip: [] })
+  })
+
+  it('a 30-symbol basket under the free Alpha Vantage cap requests exactly 25', () => {
+    const basket = Array.from({ length: 30 }, (_, i) => `S${i}`)
+    const { attempt, skip } = splitByDailyLimit(basket, FREE_DAILY_REQUEST_LIMIT)
+    expect(attempt).toHaveLength(25)
+    expect(skip).toEqual(['S25', 'S26', 'S27', 'S28', 'S29'])
   })
 })
