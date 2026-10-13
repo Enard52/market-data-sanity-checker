@@ -19,6 +19,12 @@ Requires Node.js ≥ 22.12 and pnpm (see `engines` and `packageManager` in `pack
 
 New here? [docs/tutorial-first-rule.md](docs/tutorial-first-rule.md) walks one real rule (`VOLUME_NEGATIVE`) from the source to the pull request. The [good first issues](https://github.com/pacocartones/market-data-sanity-checker/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) come with their source already found.
 
+## Claiming an issue
+
+Comment `/take` on the issue and a bot assigns it to you straight away, if nobody has it and you have fewer than two open issues assigned. If you can't continue, comment `/release`; that's completely fine, and it frees the issue for someone else. An assigned issue with no activity for two weeks may be offered to another contributor, after a ping. A pull request for an issue assigned to someone else waits for them.
+
+Issues labelled `no claim needed` are small enough that nobody claims them: open a pull request when it's ready, and the first correct one is merged.
+
 We reply to every new issue, pull request and "can I take this?" comment within 24 hours, usually the same day. A reply is a real answer (a review, a question or an assignment), not an acknowledgement.
 
 ## The rule contract
