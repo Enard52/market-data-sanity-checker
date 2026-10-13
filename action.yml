@@ -1,8 +1,8 @@
-name: market-data-sanity-checker
-description: Validate a market-data file (CSV or JSON) with mdsc and fail the job when the data is bad
+name: Market Data Sanity Checker
+description: "Fail CI on bad market data: stale prices, unadjusted splits, gaps and outliers in OHLCV CSV or JSON, scored 0-100"
 author: pacocartones
 branding:
-  icon: check-circle
+  icon: activity
   color: green
 
 inputs:
