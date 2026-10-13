@@ -185,6 +185,16 @@ function validateCommonFlags(options: GatingOptions & { format: string }): numbe
   return null
 }
 
+/**
+ * Parses --limit: a whole number of at least 1 written as plain digits.
+ * Returns null for anything else ("abc", "0", "-3", "2.5", "1e3").
+ */
+function parseLimit(raw: string): number | null {
+  if (!/^\d+$/.test(raw)) return null
+  const limit = Number(raw)
+  return Number.isSafeInteger(limit) && limit >= 1 ? limit : null
+}
+
 /** True for Node's ENOENT ("no such file or directory") errors. */
 function isFileNotFound(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'ENOENT'
@@ -378,8 +388,15 @@ program
   .option('--limit <n>', 'max entries to show', '20')
   .option('--history-dir <dir>', 'history directory', DEFAULT_HISTORY_DIR)
   .action(async (options: { symbol: string; limit: string; historyDir: string }) => {
+    // Validate before touching the history directory, like check/compare do.
+    const limit = parseLimit(options.limit)
+    if (limit === null) {
+      console.error('mdsc: --limit must be a whole number of at least 1')
+      process.exitCode = 2
+      return
+    }
     try {
-      const entries = await readHistory(options.historyDir, options.symbol, Number(options.limit))
+      const entries = await readHistory(options.historyDir, options.symbol, limit)
       if (entries.length === 0) {
         console.log(`\nNo audit history for ${options.symbol}. Run: mdsc check --provider yahoo --symbol ${options.symbol} --save\n`)
         return

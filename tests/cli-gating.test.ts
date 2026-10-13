@@ -216,6 +216,52 @@ describe('check — early flag validation (exit 2, no report)', () => {
   )
 })
 
+describe('history — --limit validation (exit 2, history not read)', () => {
+  const historyLine = (at: string, score: number) =>
+    JSON.stringify({
+      at,
+      symbol: 'AAPL',
+      source: 'test',
+      sanity_score: score,
+      summary: { critical: 0, warning: 0, info: 0 },
+      rules: [],
+    }) + '\n'
+
+  it.each(['abc', '0', '-3', '2.5'])(
+    'rejects --limit %s with exit 2 and empty stdout',
+    async (limit) => {
+      await withTempDir(async (dir) => {
+        await writeFile(join(dir, 'AAPL.jsonl'), historyLine('2026-01-01T00:00:00.000Z', 90))
+        const result = await runCli(['history', '--symbol', 'AAPL', '--history-dir', dir, `--limit=${limit}`])
+        expect(result.code).toBe(2)
+        expect(result.stdout).toBe('')
+        expect(result.stderr).toContain('mdsc: --limit must be a whole number of at least 1')
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'accepts a valid --limit and shows at most that many entries',
+    async () => {
+      await withTempDir(async (dir) => {
+        await writeFile(
+          join(dir, 'AAPL.jsonl'),
+          historyLine('2026-01-01T00:00:00.000Z', 80) +
+            historyLine('2026-01-02T00:00:00.000Z', 85) +
+            historyLine('2026-01-03T00:00:00.000Z', 90),
+        )
+        const result = await runCli(['history', '--symbol', 'AAPL', '--history-dir', dir, '--limit', '2'])
+        expect(result.code).toBe(0)
+        expect(result.stderr).toBe('')
+        expect(result.stdout).toContain('trend: 85 → 90')
+        expect(result.stdout).not.toContain('2026-01-01')
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+})
+
 describe('bare mdsc', () => {
   it(
     'prints help to stdout and exits 0',
