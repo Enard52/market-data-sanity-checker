@@ -25,6 +25,7 @@ import { connectors, connectorStatus } from '../src/connectors/index'
 import { splitByDailyLimit } from '../src/connectors/types'
 import { checkMarketData } from '../src/checker'
 import { compareDatasets } from '../src/compare/comparator'
+import { renderScoreboardReadme, type ScoreboardProviderResult, type SkippedProvider } from '../src/scoreboard/readme'
 import type { MarketDataSet } from '../src/schema/market-data'
 
 const BASKET = [
@@ -40,18 +41,6 @@ const pauseMs = (provider: string) => (provider === 'alpha-vantage' ? 1200 : 300
 
 /** RFC 4180-style quoting: only fields containing a quote, comma or line break need it. */
 const escapeCsvField = (value: string): string => (/[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
-
-interface ProviderResult {
-  provider: string
-  symbols_ok: number
-  symbols_failed: number
-  /** Basket symbols not requested because they are over the provider's daily request cap. */
-  symbols_skipped: number
-  mean_score: number
-  min_score: number
-  worst_symbols: Array<{ symbol: string; score: number; rules: string[] }>
-  total_findings: Record<string, number>
-}
 
 /** One row of scoreboard/latest.csv: a (provider, symbol) pair. score/summary are null when the fetch failed. */
 interface SymbolRow {
@@ -76,7 +65,8 @@ if (active.length === 0) {
 }
 
 const datasetsByProvider = new Map<string, Map<string, MarketDataSet>>()
-const providerResults: ProviderResult[] = []
+const providerResults: ScoreboardProviderResult[] = []
+const skippedForReadme: SkippedProvider[] = []
 const symbolRows: SymbolRow[] = []
 const excluded: Array<{ provider: string; failed: number }> = []
 
@@ -134,6 +124,10 @@ for (const connector of active) {
     excluded.push({ provider: connector.name, failed })
     datasetsByProvider.delete(connector.name)
     continue
+  }
+
+  if (skip.length > 0) {
+    skippedForReadme.push({ provider: connector.name, symbols: [...skip] })
   }
 
   // CSV rows are collected in basket order, before the in-place sort below.
@@ -202,39 +196,17 @@ await writeFile(
   JSON.stringify({ generated_at: generatedAt, basket: BASKET, range: '1y', providers: providerResults, excluded, comparisons }, null, 2),
 )
 
-const lines = [
-  '# Provider scoreboard',
-  '',
-  `Generated: ${generatedAt} · basket: ${BASKET.length} liquid symbols · range: 1y · reproducible with \`pnpm scoreboard\``,
-  '',
-  '| Provider | Symbols | Mean sanity score | Min | Critical | Warning | Info |',
-  '|---|---|---|---|---|---|---|',
-  ...providerResults.map(
-    (result) =>
-      `| ${result.provider} | ${result.symbols_ok} (+${result.symbols_failed} failed${result.symbols_skipped > 0 ? `, ${result.symbols_skipped} skipped: daily cap` : ''}) | ${result.mean_score} | ${result.min_score} | ${result.total_findings.critical} | ${result.total_findings.warning} | ${result.total_findings.info} |`,
-  ),
-  ...(excluded.length > 0
-    ? [
-        '',
-        `Excluded this run (more than 20% of fetches failed, so none of their numbers are published): ${excluded
-          .map((entry) => `${entry.provider} (${entry.failed}/${BASKET.length} failed)`)
-          .join(', ')}`,
-      ]
-    : []),
-  '',
-  '## Worst-scoring symbols per provider',
-  '',
-  ...providerResults.flatMap((result) => [
-    `### ${result.provider}`,
-    '',
-    ...result.worst_symbols.map(
-      (entry) => `- **${entry.symbol}** — ${entry.score}/100${entry.rules.length > 0 ? ` (${entry.rules.join(', ')})` : ' (clean)'}`,
-    ),
-    '',
-  ]),
-  comparisons.length > 0 ? `## Cross-provider consistency\n\n\`\`\`json\n${JSON.stringify(comparisons, null, 2)}\n\`\`\`\n` : '',
-]
-await writeFile('scoreboard/README.md', lines.join('\n'))
+await writeFile(
+  'scoreboard/README.md',
+  renderScoreboardReadme({
+    generatedAt,
+    basketSize: BASKET.length,
+    providers: providerResults,
+    excluded,
+    skipped: skippedForReadme,
+    comparisons,
+  }),
+)
 
 const csvLines = [
   'generated_at,provider,symbol,sanity_score,critical,warning,info,rules',
