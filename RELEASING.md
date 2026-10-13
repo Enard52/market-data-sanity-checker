@@ -7,7 +7,9 @@ standard applies to the maintainer's other public repositories.
 
 1. **Versioning:** SemVer. Breaking changes only in a major version.
 2. **Tags:** `vX.Y.Z`, never moved. The GitHub Action also has a moving major tag (`v1`)
-   that follows the latest compatible release; users who want certainty pin a commit SHA.
+   that follows the latest compatible release; users who want certainty pin a commit SHA. The
+   README's Action example pins the commit of the latest release, with its version in the
+   comment; update it in the same change that moves `v1`.
 3. **Source:** only from `main`, with every check green, from the exact commit that was tested.
 4. **Approval:** publishing to npm runs in the `release` environment, which needs a
    maintainer's approval. When nothing is pending, the release job is skipped and no approval
