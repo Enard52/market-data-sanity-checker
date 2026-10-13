@@ -1,0 +1,77 @@
+name: market-data-sanity-checker
+description: Validate a market-data file (CSV or JSON) with mdsc and fail the job when the data is bad
+author: pacocartones
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  file:
+    description: Path to the .csv or .json file to check
+    required: true
+  fail-on:
+    description: "Fail the step on findings at or above this severity: critical | warning | info. Critical findings always fail (mdsc's default); to report without failing the job, set continue-on-error on the step."
+    required: false
+    default: critical
+  min-score:
+    description: Fail the step when the sanity_score is below this value (0-100). Empty disables it.
+    required: false
+    default: ""
+  symbol:
+    description: Symbol override for the file (optional)
+    required: false
+    default: ""
+  source:
+    description: Data source name recorded as provenance (optional)
+    required: false
+    default: ""
+  html:
+    description: Also write the self-contained HTML dashboard to this path (optional)
+    required: false
+    default: ""
+  version:
+    description: Version of the market-data-sanity-checker npm package to run (major, major.minor or exact)
+    required: false
+    default: "1"
+  setup-node:
+    description: Install Node.js 22 with actions/setup-node. Set to false if the job already provides Node >= 22.12.
+    required: false
+    default: "true"
+
+outputs:
+  score:
+    description: The sanity_score (0-100)
+    value: ${{ steps.check.outputs.score }}
+  critical:
+    description: Number of critical findings
+    value: ${{ steps.check.outputs.critical }}
+  warning:
+    description: Number of warning findings
+    value: ${{ steps.check.outputs.warning }}
+  info:
+    description: Number of info findings
+    value: ${{ steps.check.outputs.info }}
+  report:
+    description: Path of the JSON report
+    value: ${{ steps.check.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      if: inputs.setup-node == 'true'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: "22"
+    - name: Check market data
+      id: check
+      shell: bash
+      env:
+        MDSC_FILE: ${{ inputs.file }}
+        MDSC_FAIL_ON: ${{ inputs.fail-on }}
+        MDSC_MIN_SCORE: ${{ inputs.min-score }}
+        MDSC_SYMBOL: ${{ inputs.symbol }}
+        MDSC_SOURCE: ${{ inputs.source }}
+        MDSC_HTML: ${{ inputs.html }}
+        MDSC_VERSION: ${{ inputs.version }}
+      run: bash "$GITHUB_ACTION_PATH/action/run.sh"

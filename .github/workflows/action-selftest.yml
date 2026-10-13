@@ -1,0 +1,59 @@
+name: Action self-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel redundant runs on rapid pushes to the same branch/PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  selftest:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Clean data passes
+        id: clean
+        uses: ./
+        with:
+          file: tests/fixtures/ohlcv-valid.csv
+          min-score: "80"
+
+      - name: Bad data fails the step
+        id: bad
+        continue-on-error: true
+        uses: ./
+        with:
+          file: tests/fixtures/berkshire-bad-tick.json
+
+      - name: Assert outcomes and outputs
+        shell: bash
+        env:
+          CLEAN_SCORE: ${{ steps.clean.outputs.score }}
+          CLEAN_CRITICAL: ${{ steps.clean.outputs.critical }}
+          BAD_OUTCOME: ${{ steps.bad.outcome }}
+          BAD_CRITICAL: ${{ steps.bad.outputs.critical }}
+          BAD_REPORT: ${{ steps.bad.outputs.report }}
+        run: |
+          set -u
+          test "$CLEAN_SCORE" = 80
+          test "$CLEAN_CRITICAL" = 0
+          test "$BAD_OUTCOME" = failure
+          test "$BAD_CRITICAL" = 1
+          test -s "$BAD_REPORT"
+          echo "self-test passed"
