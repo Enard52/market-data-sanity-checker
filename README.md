@@ -158,6 +158,7 @@ mdsc check --provider yahoo --symbol AAPL --fail-on warning --min-score 80
 # keep an audit trail and see the trend
 mdsc check --provider yahoo --symbol AAPL --save
 mdsc history --symbol AAPL
+mdsc history --symbol AAPL --format json   # { "symbol", "entries" } for scripts
 
 # self-contained HTML dashboard (offline, interactive — great CI artifact)
 mdsc check --file aapl.csv --html report.html

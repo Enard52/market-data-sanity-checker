@@ -262,6 +262,96 @@ describe('history — --limit validation (exit 2, history not read)', () => {
   )
 })
 
+describe('history — --format', () => {
+  const entry = (at: string, score: number) => ({
+    at,
+    symbol: 'AAPL',
+    source: 'test',
+    sanity_score: score,
+    summary: { critical: 0, warning: 1, info: 0 },
+    rules: ['STALE_PRICE'],
+  })
+
+  it(
+    'prints { symbol, entries } with the entries readHistory returns (most recent first)',
+    async () => {
+      await withTempDir(async (dir) => {
+        const entries = [
+          entry('2026-01-01T00:00:00.000Z', 80),
+          entry('2026-01-02T00:00:00.000Z', 85),
+          entry('2026-01-03T00:00:00.000Z', 90),
+        ]
+        await writeFile(join(dir, 'AAPL.jsonl'), entries.map((e) => JSON.stringify(e) + '\n').join(''))
+        const result = await runCli(['history', '--symbol', 'AAPL', '--history-dir', dir, '--format', 'json'])
+        expect(result.code).toBe(0)
+        expect(result.stderr).toBe('')
+        expect(JSON.parse(result.stdout)).toEqual({ symbol: 'AAPL', entries: [...entries].reverse() })
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'applies --limit to the JSON entries (most recent kept)',
+    async () => {
+      await withTempDir(async (dir) => {
+        const entries = [
+          entry('2026-01-01T00:00:00.000Z', 80),
+          entry('2026-01-02T00:00:00.000Z', 85),
+          entry('2026-01-03T00:00:00.000Z', 90),
+        ]
+        await writeFile(join(dir, 'AAPL.jsonl'), entries.map((e) => JSON.stringify(e) + '\n').join(''))
+        const result = await runCli([
+          'history', '--symbol', 'AAPL', '--history-dir', dir, '--format', 'json', '--limit', '2',
+        ])
+        expect(result.code).toBe(0)
+        expect(JSON.parse(result.stdout)).toEqual({ symbol: 'AAPL', entries: [entries[2], entries[1]] })
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'prints an empty entries array (not the hint) and exits 0 when there is no history',
+    async () => {
+      await withTempDir(async (dir) => {
+        const result = await runCli(['history', '--symbol', 'MSFT', '--history-dir', dir, '--format', 'json'])
+        expect(result.code).toBe(0)
+        expect(result.stderr).toBe('')
+        expect(JSON.parse(result.stdout)).toEqual({ symbol: 'MSFT', entries: [] })
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'rejects an unknown --format with exit 2 before reading the history',
+    async () => {
+      await withTempDir(async (dir) => {
+        await writeFile(join(dir, 'AAPL.jsonl'), JSON.stringify(entry('2026-01-01T00:00:00.000Z', 90)) + '\n')
+        const result = await runCli(['history', '--symbol', 'AAPL', '--history-dir', dir, '--format', 'xml'])
+        expect(result.code).toBe(2)
+        expect(result.stdout).toBe('')
+        expect(result.stderr).toContain('mdsc: --format must be one of: table, json')
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+
+  it(
+    'keeps the table as the default output',
+    async () => {
+      await withTempDir(async (dir) => {
+        await writeFile(join(dir, 'AAPL.jsonl'), JSON.stringify(entry('2026-01-01T00:00:00.000Z', 90)) + '\n')
+        const result = await runCli(['history', '--symbol', 'AAPL', '--history-dir', dir])
+        expect(result.code).toBe(0)
+        expect(result.stdout).toContain('Audit history — AAPL')
+      })
+    },
+    CLI_TIMEOUT_MS,
+  )
+})
+
 describe('bare mdsc', () => {
   it(
     'prints help to stdout and exits 0',

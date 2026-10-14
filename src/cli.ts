@@ -386,8 +386,9 @@ program
   .description('Show the audit history of a symbol (score evolution over time)')
   .requiredOption('--symbol <symbol>', 'symbol to look up')
   .option('--limit <n>', 'max entries to show', '20')
+  .option('--format <format>', 'output format: table | json', 'table')
   .option('--history-dir <dir>', 'history directory', DEFAULT_HISTORY_DIR)
-  .action(async (options: { symbol: string; limit: string; historyDir: string }) => {
+  .action(async (options: { symbol: string; limit: string; format: string; historyDir: string }) => {
     // Validate before touching the history directory, like check/compare do.
     const limit = parseLimit(options.limit)
     if (limit === null) {
@@ -395,8 +396,19 @@ program
       process.exitCode = 2
       return
     }
+    const format = options.format.toLowerCase()
+    if (format !== 'table' && format !== 'json') {
+      console.error('mdsc: --format must be one of: table, json')
+      process.exitCode = 2
+      return
+    }
     try {
       const entries = await readHistory(options.historyDir, options.symbol, limit)
+      if (format === 'json') {
+        // Always a JSON document, even with no history, so scripts can parse it.
+        console.log(JSON.stringify({ symbol: options.symbol, entries }, null, 2))
+        return
+      }
       if (entries.length === 0) {
         console.log(`\nNo audit history for ${options.symbol}. Run: mdsc check --provider yahoo --symbol ${options.symbol} --save\n`)
         return
