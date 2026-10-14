@@ -118,6 +118,11 @@ mdsc check --file aapl.json --format json > report.json
 # provider status and rule catalog
 mdsc providers
 mdsc rules
+mdsc rules --format json | jq '.single_source[].id'
+# (outputs JSON with two top-level keys: "single_source" and "compare")
+
+# print installed version
+mdsc --version
 ```
 
 Exit codes: `0` gate passed · `1` gate failed (critical findings, or `--fail-on`/`--min-score`)
