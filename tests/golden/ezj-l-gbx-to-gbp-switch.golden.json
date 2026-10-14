@@ -1,0 +1,9 @@
+{
+  "fixture": "ezj-l-gbx-to-gbp-switch.json",
+  "sanity_score": 30,
+  "findings": [
+    { "rule": "SPLIT_NOT_ADJUSTED", "severity": "critical", "action": "block", "where": { "date": "2020-04-22" } },
+    { "rule": "CURRENCY_SCALE_SUSPECT", "severity": "warning", "action": "flag", "where": { "date": "2020-04-22" } },
+    { "rule": "INSUFFICIENT_DATA", "severity": "warning", "action": "flag", "where": null }
+  ]
+}

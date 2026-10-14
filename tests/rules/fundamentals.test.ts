@@ -76,6 +76,31 @@ describe('PE_EPS_INCOMPATIBLE', () => {
     })
   })
 
+  it('flags a negative P/E with positive EPS', () => {
+    const findings = peEpsIncompatible.check(
+      { symbol: 'X', source: 'test', bars, fundamentals: { pe: -5, eps: 2 } },
+      ctxPe,
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'PE_EPS_INCOMPATIBLE',
+      where: { date: '2024-06-07' },
+      evidence: { pe: -5, eps: 2 },
+    })
+  })
+
+  it('flags a positive P/E with zero EPS', () => {
+    const findings = peEpsIncompatible.check(
+      { symbol: 'X', source: 'test', bars, fundamentals: { pe: 25, eps: 0 } },
+      ctxPe,
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'PE_EPS_INCOMPATIBLE',
+      where: { date: '2024-06-07' },
+    })
+  })
+
   it('flags a P/E that does not reconcile with close / EPS', () => {
     const findings = peEpsIncompatible.check(
       { symbol: 'X', source: 'test', bars, fundamentals: { pe: 25, eps: 2 } },
@@ -145,6 +170,55 @@ describe('PAYOUT_IMPOSSIBLE', () => {
         payoutImpossible.check({ symbol: 'X', source: 'test', bars, fundamentals: { payoutRatio } }, ctxPayout),
       ).toEqual([])
     }
+  })
+
+  it('stays silent at the exact 300% boundary and flags just above it', () => {
+    expect(
+      payoutImpossible.check({ symbol: 'X', source: 'test', bars, fundamentals: { payoutRatio: 3 } }, ctxPayout),
+    ).toEqual([])
+
+    const findings = payoutImpossible.check(
+      { symbol: 'X', source: 'test', bars, fundamentals: { payoutRatio: 3.01 } },
+      ctxPayout,
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'PAYOUT_IMPOSSIBLE',
+      where: { date: '2024-06-07' },
+      evidence: { payoutRatio: 3.01 },
+    })
+  })
+
+  it('flags payout ratio exceeding a custom maxPayout threshold', () => {
+    const customCtx: RuleContext = {
+      ...ctxPayout,
+      config: { ...ctxPayout.config, params: { maxPayout: 1 } },
+    }
+    const findings = payoutImpossible.check(
+      { symbol: 'X', source: 'test', bars, fundamentals: { payoutRatio: 1.5 } },
+      customCtx,
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'PAYOUT_IMPOSSIBLE',
+      where: { date: '2024-06-07' },
+      evidence: { payoutRatio: 1.5 },
+    })
+  })
+
+  it('skips non-finite payoutRatio values', () => {
+    expect(
+      payoutImpossible.check(
+        { symbol: 'X', source: 'test', bars, fundamentals: { payoutRatio: Number.NaN } },
+        ctxPayout,
+      ),
+    ).toEqual([])
+    expect(
+      payoutImpossible.check(
+        { symbol: 'X', source: 'test', bars, fundamentals: { payoutRatio: Number.POSITIVE_INFINITY } },
+        ctxPayout,
+      ),
+    ).toEqual([])
   })
 
   it('handles missing fundamentals and missing bars', () => {

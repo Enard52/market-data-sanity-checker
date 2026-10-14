@@ -30,6 +30,7 @@ export const currencyScaleSuspect: Rule = {
     references: [
       'https://forum.portfolio-performance.info/t/stock-prices-in-pence-gbx/14270',
       'https://ranaroussi.github.io/yfinance/advanced/price_repair.html',
+      'https://github.com/ranaroussi/yfinance/issues/280',
     ],
   },
 
