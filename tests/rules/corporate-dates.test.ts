@@ -69,6 +69,62 @@ describe('EXDATE_AFTER_PAYDATE', () => {
     ).toEqual([])
   })
 
+  it('stays silent at the exact 20% exemption boundary (amount: 2, prevClose: 10)', () => {
+    expect(
+      exdateAfterPaydate.check(
+        {
+          symbol: 'X',
+          source: 'test',
+          bars,
+          dividends: [{ exDate: '2023-05-10', payDate: '2023-05-05', amount: 2 }],
+        },
+        ctxAfterPaydate,
+      ),
+    ).toEqual([])
+  })
+
+  it('fires just below the 20% exemption boundary (amount: 1.99, prevClose: 10)', () => {
+    const findings = exdateAfterPaydate.check(
+      {
+        symbol: 'X',
+        source: 'test',
+        bars,
+        dividends: [{ exDate: '2023-05-10', payDate: '2023-05-05', amount: 1.99 }],
+      },
+      ctxAfterPaydate,
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'EXDATE_AFTER_PAYDATE',
+      severity: 'warning',
+      action: 'block',
+      dimension: 'validity',
+      where: { date: '2023-05-10' },
+      evidence: { exDate: '2023-05-10', payDate: '2023-05-05' },
+    })
+  })
+
+  it('flags a 30% dividend when custom largeDividendPct is set to 0.5', () => {
+    const customCtx: RuleContext = {
+      config: { severity: exdateAfterPaydate.meta.severity, params: { largeDividendPct: 0.5 } },
+      profile: { returns: [], medianReturn: 0, madReturn: 0 },
+    }
+    const findings = exdateAfterPaydate.check(
+      {
+        symbol: 'X',
+        source: 'test',
+        bars,
+        dividends: [{ exDate: '2023-05-10', payDate: '2023-05-05', amount: 3, type: 'special' }],
+      },
+      customCtx,
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'EXDATE_AFTER_PAYDATE',
+      severity: 'warning',
+    })
+  })
+
   it('still fires when the dividend size cannot be judged (no usable bars)', () => {
     const findings = exdateAfterPaydate.check(
       {
