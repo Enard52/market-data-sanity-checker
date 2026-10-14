@@ -99,7 +99,39 @@ findings: 0 critical · 1 warning · 0 info
            move. Hypothesis: the feed mixes price scales in blocks — pence vs pounds ...
 ```
 
-## 4. Comparing two sources — and refusing to lie
+## 4. Phantom trades: zero volume but price moved
+
+A price can only move when trades happen, so an intraday range (`high != low`) with zero
+reported volume is contradictory — documented real cases (such as 1COV.DE on Yahoo, noted in
+yfinance's price-repair documentation) turned out to be corrupt vendor rows. It is flagged as a
+warning rather than critical because corrupt vendor rows require verification against the source
+before consuming. Bars with `volume = 0` and `high == low` represent halted or zero-trade sessions
+and are intentionally not flagged:
+
+```bash
+mdsc check --file tests/fixtures/ohlcv-zero-volume-moved.csv
+```
+
+```
+UNKNOWN (csv) — sanity_score: 65/100
+findings: 0 critical · 2 warning · 1 info
+  WARNING  INSUFFICIENT_DATA → flag
+           Only 5 bar(s) provided (minimum for meaningful checks: 10). The statistical rules
+           (spikes, staleness, splits) have nothing to work with, so this score reflects
+           absence of evidence, not evidence of quality. Fetch more history before trusting
+           the result.
+  WARNING  ZERO_VOLUME_MOVED [2024-01-04] → flag
+           Zero volume but the price moved intraday (high 104 != low 101), which is
+           contradictory unless the instrument was halted — and halted sessions usually report
+           high == low. Documented real cases (e.g. 1COV.DE on Yahoo) turned out to be corrupt vendor
+           rows; verify against the source before consuming.
+  INFO     CURRENCY_SUSPECT → review
+           Dataset for UNKNOWN has no currency. Without it, prices cannot be interpreted (the
+           LSE quotes in pence (GBX), not pounds — a GBP/GBX mix-up is a silent ×100 error).
+           Record the trading currency explicitly, and use GBX for pence-quoted series.
+```
+
+## 5. Comparing two sources — and refusing to lie
 
 `mdsc compare` checks whether two feeds agree on the same symbol:
 
@@ -132,7 +164,7 @@ findings: 2 critical · 0 warning · 0 info
            instruments, so every divergence below would be meaningless. ...
 ```
 
-## 5. Live data and the HTML dashboard
+## 6. Live data and the HTML dashboard
 
 No fixtures needed — Yahoo works keyless:
 
