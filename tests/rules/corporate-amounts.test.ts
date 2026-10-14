@@ -203,6 +203,70 @@ describe('DIV_SPECIAL_MISCLASSIFIED', () => {
     expect(divSpecialMisclassified.check(data, specialCtx)).toEqual([])
   })
 
+  it('exercises the magnitude threshold edge (0.5 returns [], 0.6 fires)', () => {
+    const dataAtEdge: MarketDataSet = {
+      symbol: 'X',
+      source: 'test',
+      bars: [],
+      dividends: [...regulars, { exDate: '2024-06-15', amount: 0.5, type: 'regular' }],
+    }
+    expect(divSpecialMisclassified.check(dataAtEdge, specialCtx)).toEqual([])
+
+    const dataAboveEdge: MarketDataSet = {
+      symbol: 'X',
+      source: 'test',
+      bars: [],
+      dividends: [...regulars, { exDate: '2024-06-15', amount: 0.6, type: 'regular' }],
+    }
+    const findings = divSpecialMisclassified.check(dataAboveEdge, specialCtx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'DIV_SPECIAL_MISCLASSIFIED',
+      where: { date: '2024-06-15' },
+      evidence: { amount: 0.6, peer_median: 0.1, ratio: expect.closeTo(6) },
+    })
+  })
+
+  it('exercises the isolationDays edge (exactly 90 days returns [], 91 days fires)', () => {
+    const dataAt90Days: MarketDataSet = {
+      symbol: 'X',
+      source: 'test',
+      bars: [],
+      dividends: [...regulars, { exDate: '2024-04-14', amount: 1, type: 'regular' }],
+    }
+    expect(divSpecialMisclassified.check(dataAt90Days, specialCtx)).toEqual([])
+
+    const dataAt91Days: MarketDataSet = {
+      symbol: 'X',
+      source: 'test',
+      bars: [],
+      dividends: [...regulars, { exDate: '2024-04-15', amount: 1, type: 'regular' }],
+    }
+    const findings = divSpecialMisclassified.check(dataAt91Days, specialCtx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'DIV_SPECIAL_MISCLASSIFIED',
+      where: { date: '2024-04-15' },
+      evidence: { amount: 1, peer_median: 0.1, ratio: 10 },
+    })
+  })
+
+  it('fires at the exact minPeers threshold with 4 peers', () => {
+    const data: MarketDataSet = {
+      symbol: 'X',
+      source: 'test',
+      bars: [],
+      dividends: [...regulars.slice(0, 4), { exDate: '2024-06-15', amount: 1, type: 'regular' }],
+    }
+    const findings = divSpecialMisclassified.check(data, specialCtx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      rule: 'DIV_SPECIAL_MISCLASSIFIED',
+      where: { date: '2024-06-15' },
+      evidence: { amount: 1, peer_median: 0.1, ratio: 10 },
+    })
+  })
+
   it('handles datasets without dividends', () => {
     expect(divSpecialMisclassified.check({ symbol: 'X', source: 'test', bars: [] }, specialCtx)).toEqual([])
   })
