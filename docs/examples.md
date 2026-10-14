@@ -144,6 +144,70 @@ mdsc check --provider yahoo --symbol TSLA --html report.html
 chart with anomaly markers, score breakdown, and every finding with its evidence and
 references. See the screenshot in the [README](../README.md).
 
+## Run it in GitHub Actions
+
+The same data gate can run on every push and pull request. This example keeps the JSON report as a downloadable artifact even when the gate fails:
+
+```yaml
+name: Market data gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sanity-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Check market data
+        run: |
+          npx --yes market-data-sanity-checker check \
+            --file data/prices.csv \
+            --fail-on critical \
+            --min-score 80 \
+            --format json > report.json
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: market-data-report
+          path: report.json
+```
+
+`--fail-on critical` makes critical findings fail the data gate, while `--min-score 80` also fails it when the overall score is below 80. Exit code `1` means the data gate rejected the input; exit code `2` means the command could not perform the check. The `always()` condition lets the artifact upload run after exit code `1`, so the report is available for inspection.
+
+If you prefer a self-contained visual report, replace the JSON redirection and artifact path with:
+
+```bash
+npx --yes market-data-sanity-checker check \
+  --file data/prices.csv \
+  --fail-on critical \
+  --min-score 80 \
+  --html report.html
+```
+
+For the HTML variant, change the artifact step's `path:` to `report.html`.
+
+For a local smoke test, use the shipped anomalous fixture; it intentionally exits `1` while still producing a report:
+
+```bash
+pnpm exec mdsc check --file tests/fixtures/mob-st-unadjusted-split.json --fail-on critical --min-score 80 --format json > report.json
+```
+
+The command should report the `SPLIT_NOT_ADJUSTED` finding and create parseable `report.json` before returning the failing gate status.
+
+This smoke test prints `SPLIT_NOT_ADJUSTED`, scores 60/100, exits `1`, and leaves a parseable
+`report.json` for inspection.
+
 ## Exit codes for CI
 
 Every example above exits `1` when the gate fails (critical findings, or your
