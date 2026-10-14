@@ -3,7 +3,7 @@
 Every fixture in [`tests/fixtures/`](../tests/fixtures/) reproduces a **documented
 real-world data failure**, reduced to the smallest dataset that exhibits it. They are
 the project's memory: each one anchors one or more rules to a case that actually
-happened and cost someone money, time or trust. Each of the 13 real-case JSON
+happened and cost someone money, time or trust. Each of the 14 real-case JSON
 fixtures has a hand-reviewed golden report in [`tests/golden/`](../tests/golden/)
 fixing the exact expected findings (see [`tests/golden.test.ts`](../tests/golden.test.ts)).
 
@@ -16,6 +16,7 @@ Adding a rule? Add its fixture first — the contract is: no real-world case, no
 | `mob-st-unadjusted-split.json` | Yahoo logged MOB.ST's 2:1 split but never adjusted prior prices — a phantom −50% "crash" ([yfinance Price Repair](https://ranaroussi.github.io/yfinance/advanced/price_repair.html)) | `SPLIT_NOT_ADJUSTED` |
 | `berkshire-bad-tick.json` | 3-Jun-2024: a SIP software bug printed BRK.A at **$185.15** (~−99.97%); ~40 symbols affected, trades busted, IBKR lost $48M ([The Stack](https://www.thestack.technology/nyse-glitch-cause/)) | `PRICE_SPIKE_INTRADAY`, `RETURN_SPIKE` |
 | `aet-l-currency-scale.json` | Yahoo switches London series between £ and pence **in blocks** inside the same series (AET.L) ([yfinance Price Repair](https://ranaroussi.github.io/yfinance/advanced/price_repair.html), [GBX/GBP](https://forum.portfolio-performance.info/t/stock-prices-in-pence-gbx/14270)) | `CURRENCY_SCALE_SUSPECT` |
+| `ezj-l-gbx-to-gbp-switch.json` | EasyJet (London): permanent mid-series switch from pence to pounds on 22-Apr-2020; published prices, ticker inferred from company name ([yfinance#280](https://github.com/ranaroussi/yfinance/issues/280)) | `CURRENCY_SCALE_SUSPECT`, `SPLIT_NOT_ADJUSTED` |
 
 ## Corporate actions
 
