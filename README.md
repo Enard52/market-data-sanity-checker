@@ -163,7 +163,13 @@ mdsc check --provider yahoo --symbol AAPL --fail-on warning --min-score 80
 # keep an audit trail and see the trend
 mdsc check --provider yahoo --symbol AAPL --save
 mdsc history --symbol AAPL
+mdsc history --symbol AAPL --limit 5   # limits max entries shown (default: 20)
+# (an invalid --limit such as zero, negative, or non-digits exits with code 2)
 mdsc history --symbol AAPL --format json   # { "symbol", "entries" } for scripts
+
+# custom audit trail directory (the same --history-dir must be passed to both check and history)
+mdsc check --provider yahoo --symbol AAPL --save --history-dir ./audit
+mdsc history --symbol AAPL --history-dir ./audit
 
 # self-contained HTML dashboard (offline, interactive — great CI artifact)
 mdsc check --file aapl.csv --html report.html
