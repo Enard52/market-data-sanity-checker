@@ -1,0 +1,12 @@
+{
+  "symbol": "EZJ.L",
+  "source": "yahoo",
+  "currency": "GBP",
+  "bars": [
+    { "timestamp": "2020-04-20", "open": 640.0, "high": 664.599976, "low": 605.799988, "close": 612.200012, "volume": 4869693 },
+    { "timestamp": "2020-04-21", "open": 604.599976, "high": 619.856995, "low": 584.16803, "close": 609.599976, "volume": 3280302 },
+    { "timestamp": "2020-04-22", "open": 6.17, "high": 6.31, "low": 5.8213, "close": 5.854, "volume": 3812785 },
+    { "timestamp": "2020-04-23", "open": 5.868, "high": 5.97005, "low": 5.70617, "close": 5.872, "volume": 2900462 },
+    { "timestamp": "2020-04-24", "open": 5.784, "high": 5.8378, "low": 5.55013, "close": 5.73, "volume": 3612845 }
+  ]
+}
