@@ -483,3 +483,53 @@ describe('rules — catalog listing', () => {
     expect(result.stderr).not.toMatch(/did you mean/)
   })
 })
+
+describe('compare — error paths and exit codes', () => {
+  it('exits 2 when --files has fewer than two paths', async () => {
+    const result = await runCli(['compare', '--files', 'one.csv'])
+    expect(result.code).toBe(2)
+    expect(result.stderr).toContain('--files needs exactly two paths separated by a comma')
+  })
+
+  it('exits 2 when neither --files nor --symbol is provided', async () => {
+    const result = await runCli(['compare'])
+    expect(result.code).toBe(2)
+    expect(result.stderr).toContain('--symbol is required when comparing providers')
+  })
+
+  it('exits 2 when --symbol is given without --providers', async () => {
+    const result = await runCli(['compare', '--symbol', 'AAPL'])
+    expect(result.code).toBe(2)
+    expect(result.stderr).toContain('--providers needs two providers')
+  })
+
+  it('exits 2 on invalid --format and keeps stdout empty', async () => {
+    const result = await runCli(['compare', '--files', 'a.csv,b.csv', '--format', 'bogus'])
+    expect(result.code).toBe(2)
+    expect(result.stdout).toBe('')
+    expect(result.stderr).toContain('--format must be one of: table, json')
+  })
+
+  it('exits 2 on invalid --fail-on and keeps stdout empty', async () => {
+    const result = await runCli(['compare', '--files', 'a.csv,b.csv', '--fail-on', 'bogus'])
+    expect(result.code).toBe(2)
+    expect(result.stdout).toBe('')
+    expect(result.stderr).toContain('--fail-on must be one of:')
+  })
+
+  it('exits 2 on invalid --min-score and keeps stdout empty', async () => {
+    const result = await runCli(['compare', '--files', 'a.csv,b.csv', '--min-score', '500'])
+    expect(result.code).toBe(2)
+    expect(result.stdout).toBe('')
+    expect(result.stderr).toContain('--min-score must be a number between 0 and 100')
+  })
+
+  it('exits 0 on happy path compare --files and prints consistency_score with --format json', async () => {
+    const validFile = fixture('ohlcv-valid.csv')
+    const result = await runCli(['compare', '--files', `${validFile},${validFile}`, '--format', 'json'])
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('consistency_score')
+    const report = JSON.parse(result.stdout) as { consistency_score?: number }
+    expect(report.consistency_score).toBe(100)
+  })
+})
