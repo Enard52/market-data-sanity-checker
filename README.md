@@ -118,6 +118,7 @@ mdsc check --file aapl.json --format json > report.json
 # provider status and rule catalog
 mdsc providers
 mdsc rules
+mdsc rules SERIES_TAIL_TRUNCATED     # one rule by id (case-insensitive)
 mdsc rules --format json | jq '.single_source[].id'
 # (outputs JSON with two top-level keys: "single_source" and "compare")
 

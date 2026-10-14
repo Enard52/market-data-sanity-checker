@@ -414,4 +414,72 @@ describe('rules — catalog listing', () => {
     expect(compareSection).toMatch(/SPLIT_MISMATCH[\s\S]*?ref: https?:\/\//)
     expect((stdout.match(/^ {4}ref: /gm) ?? []).length).toBeGreaterThanOrEqual(36)
   })
+
+  // Regression for #108: the rules command used to do strict-equality on
+  // options.format === 'json', so `--format JSON` silently printed a table
+  // and `--format yaml` fell through to the table branch instead of erroring.
+  // The check/compare commands already did both correctly via validateCommonFlags;
+  // rules now mirrors them.
+  it('accepts --format JSON (case-insensitive) and prints parseable JSON on stdout', async () => {
+    const result = await runCli(['rules', '--format', 'JSON'])
+    expect(result.code).toBe(0)
+    const report = JSON.parse(result.stdout) as {
+      single_source?: unknown[]
+      compare?: unknown[]
+    }
+    expect(Array.isArray(report.single_source)).toBe(true)
+    expect(Array.isArray(report.compare)).toBe(true)
+    expect((report.single_source ?? []).length).toBeGreaterThan(0)
+  })
+
+  it('exits 2 on unknown --format with the same message as check/compare', async () => {
+    const result = await runCli(['rules', '--format', 'yaml'])
+    expect(result.code).toBe(2)
+    expect(result.stderr).toContain('--format must be one of: table, json')
+  })
+
+  // Feature for #74: `mdsc rules <ID>` prints only that rule.
+  it('prints a single rule when given an id (case-insensitive, table format)', async () => {
+    // SERIES_TAIL_TRUNCATED is a known compare rule; SPLIT_NOT_ADJUSTED is a single-source rule.
+    const result = await runCli(['rules', 'series_tail_truncated'])
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('SERIES_TAIL_TRUNCATED')
+    // Should NOT contain other rules' IDs.
+    expect(result.stdout).not.toMatch(/SPLIT_NOT_ADJUSTED/)
+    // Should not contain the catalog header (single-rule output is per-rule only).
+    expect(result.stdout).not.toMatch(/single-source rules/)
+  })
+
+  it('finds a rule in the single-source registry too (uppercase id, table format)', async () => {
+    const result = await runCli(['rules', 'SPLIT_NOT_ADJUSTED'])
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('SPLIT_NOT_ADJUSTED')
+    expect(result.stdout).not.toMatch(/SERIES_TAIL_TRUNCATED/)
+  })
+
+  it('prints only the rule\'s meta object when given an id and --format json', async () => {
+    const result = await runCli(['rules', 'SERIES_TAIL_TRUNCATED', '--format', 'json'])
+    expect(result.code).toBe(0)
+    const meta = JSON.parse(result.stdout) as { id?: string; severity?: string }
+    expect(meta.id).toBe('SERIES_TAIL_TRUNCATED')
+    expect(typeof meta.severity).toBe('string')
+  })
+
+  it('exits 1 on unknown id and suggests up to 3 prefix matches', async () => {
+    // "SPLIT" is a common prefix that matches at least SPLIT_NOT_ADJUSTED and SPLIT_MISMATCH.
+    const result = await runCli(['rules', 'SPLIT_NOTHING_LIKE_THIS'])
+    expect(result.code).toBe(1)
+    expect(result.stderr).toContain('unknown rule "SPLIT_NOTHING_LIKE_THIS"')
+    // Should suggest rules that start with "SPLIT" (case-insensitive prefix).
+    expect(result.stderr).toContain('did you mean')
+    // At least one of the suggested ids should start with SPLIT.
+    expect(result.stderr).toMatch(/SPLIT_/)
+  })
+
+  it('exits 1 on unknown id with no prefix matches (no "did you mean" hint)', async () => {
+    const result = await runCli(['rules', 'ZZZ_NONEXISTENT_ZZZ'])
+    expect(result.code).toBe(1)
+    expect(result.stderr).toContain('unknown rule "ZZZ_NONEXISTENT_ZZZ"')
+    expect(result.stderr).not.toMatch(/did you mean/)
+  })
 })

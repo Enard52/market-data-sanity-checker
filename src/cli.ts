@@ -423,11 +423,73 @@ program
   })
 
 program
-  .command('rules')
-  .description('List the rule catalog with severities, dimensions and references')
+  .command('rules [id]')
+  .description('List the rule catalog with severities, dimensions and references. With [id], print only that rule (case-insensitive).')
   .option('--format <format>', 'output format: table | json', 'table')
-  .action((options: { format: string }) => {
-    if (options.format === 'json') {
+  .action((id: string | undefined, options: { format: string }) => {
+    // Match check/compare: lower-case the format, reject unknown values
+    // with the same message and exit code 2 that validateCommonFlags uses.
+    // Without this, `mdsc rules --format JSON` silently prints a table
+    // (the strict-equality branch below never matches), and `--format yaml`
+    // falls through to the table branch instead of erroring. See #108.
+    const format = options.format.toLowerCase()
+    if (format !== 'table' && format !== 'json') {
+      console.error('mdsc: --format must be one of: table, json')
+      process.exitCode = 2
+      return
+    }
+    // Single-rule lookup: case-insensitive match in both registries.
+    // See #74 — `mdsc rules SERIES_TAIL_TRUNCATED` should print only that rule.
+    if (id !== undefined) {
+      const needle = id.toLowerCase()
+      const match = registry.find((r) => r.meta.id.toLowerCase() === needle)
+        ?? compareRegistry.find((r) => r.meta.id.toLowerCase() === needle)
+      if (!match) {
+        // Suggest up to 3 ids that share the longest common prefix with the
+        // user's input (case-insensitive). The intent is "did you mean one of
+        // these similar ids?" — e.g. `mdsc rules SPLIT_NOTHING_LIKE_THIS`
+        // should suggest SPLIT_NOT_ADJUSTED, SPLIT_MISMATCH, etc., all of
+        // which share the "SPLIT" prefix.
+        const allIds = [...registry, ...compareRegistry].map((r) => r.meta.id)
+        const suggestions = allIds
+          .map((rid) => {
+            const r = rid.toLowerCase()
+            // Length of the common prefix between rid and the user's input.
+            let i = 0
+            while (i < r.length && i < needle.length && r[i] === needle[i]) i++
+            return { id: rid, prefixLen: i }
+          })
+          .filter((s) => s.prefixLen >= 3) // at least 3 chars in common
+          .sort((a, b) => b.prefixLen - a.prefixLen)
+          .slice(0, 3)
+          .map((s) => s.id)
+        const suggestionText = suggestions.length > 0
+          ? `\nmdsc: did you mean one of: ${suggestions.join(', ')}?`
+          : ''
+        console.error(`mdsc: unknown rule "${id}"${suggestionText}`)
+        process.exitCode = 1
+        return
+      }
+      if (format === 'json') {
+        // Single rule's meta as a top-level object (not an array).
+        console.log(JSON.stringify(match.meta, null, 2))
+        return
+      }
+      // Table format for a single rule: reuse the per-rule block used by the
+      // catalog listing, but skip the "N single-source rules" header (it would
+      // be misleading for a single-rule lookup).
+      const { id: rid, severity, dimension, description, defaultParams, references } = match.meta
+      console.log(`\n  ${rid}  [${severity} · ${dimension}]`)
+      console.log(`    ${description}`)
+      const params = Object.entries(defaultParams)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ')
+      if (params) console.log(`    defaults: ${params}`)
+      for (const reference of references) console.log(`    ref: ${reference}`)
+      console.log()
+      return
+    }
+    if (format === 'json') {
       console.log(
         JSON.stringify(
           {
