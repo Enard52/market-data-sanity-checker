@@ -159,6 +159,8 @@ with the valid catalog:
 ```bash
 # gate your pipeline: exit 1 on warnings too, or when the score drops
 mdsc check --provider yahoo --symbol AAPL --fail-on warning --min-score 80
+mdsc compare --files a.csv,b.csv --fail-on warning --min-score 80
+# (on compare the score is the consistency score, and exit codes are the same as for check)
 
 # keep an audit trail and see the trend
 mdsc check --provider yahoo --symbol AAPL --save
@@ -173,6 +175,7 @@ mdsc history --symbol AAPL --history-dir ./audit
 
 # self-contained HTML dashboard (offline, interactive — great CI artifact)
 mdsc check --file aapl.csv --html report.html
+mdsc compare --files a.csv,b.csv --html compare.html   # writes a self-contained comparison dashboard
 ```
 
 ### GitHub Action
