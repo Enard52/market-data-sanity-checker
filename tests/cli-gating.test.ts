@@ -564,6 +564,19 @@ describe('compare — error paths and exit codes', () => {
     expect(findingsResult.stdout).toContain('| Rule | Severity | Date | Explanation |')
     expect(findingsResult.stdout).toContain('PRICE_SPIKE_INTRADAY')
   })
+
+  it('keeps a hostile --symbol inside the markdown heading line', async () => {
+    // The reproduction from the review of #200: --symbol reaches the heading verbatim
+    // and the output is read as markdown in a PR comment or GITHUB_STEP_SUMMARY. The
+    // csv fixture carries no symbol, so the override is the one that is rendered.
+    const hostile = 'AAPL\n\n[free prize](https://evil.example) <img src=x onerror=alert(1)>'
+    const result = await runCli(['check', '--file', fixture('ohlcv-valid.csv'), '--symbol', hostile, '--format', 'markdown'])
+    expect(result.code).toBe(0)
+    // one heading line, break collapsed to a space, markdown and html punctuation escaped
+    expect(result.stdout.split('\n')[0]).toBe(
+      '## AAPL \\[free prize\\](https://evil.example) \\<img src=x onerror=alert(1)\\> (csv) — sanity_score: 80/100',
+    )
+  })
 })
 
 describe('providers — --format', () => {
