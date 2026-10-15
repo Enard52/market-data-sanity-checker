@@ -134,8 +134,9 @@ Providers are plugins: `yahoo` works keyless; `alpha-vantage` needs the
 `ALPHA_VANTAGE_API_KEY` env var. A free key (alphavantage.co) returns the latest 100 daily
 bars, unadjusted and without dividends or splits; Alpha Vantage serves the adjusted series
 with corporate actions and full history only to premium keys, so with one set
-`ALPHA_VANTAGE_PREMIUM=true` as well. New providers plug in via the `Connector` contract
-(`src/connectors/types.ts`).
+`ALPHA_VANTAGE_PREMIUM=true` as well. Free keys default to a 25 requests/day cap; override it
+with `ALPHA_VANTAGE_DAILY_LIMIT=<positive integer>` if your key allows more. New providers plug
+in via the `Connector` contract (`src/connectors/types.ts`).
 
 ### Configuration (`mdsc.config.json`)
 

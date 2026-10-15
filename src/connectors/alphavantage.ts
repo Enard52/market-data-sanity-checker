@@ -146,7 +146,15 @@ export const alphaVantage: Connector = {
   },
 
   dailyRequestLimit(): number | undefined {
-    return isPremium() ? undefined : FREE_DAILY_REQUEST_LIMIT
+    if (isPremium()) return undefined
+    const raw = process.env.ALPHA_VANTAGE_DAILY_LIMIT
+    if (raw !== undefined && raw.trim() !== '') {
+      const parsed = Number(raw.trim())
+      if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed
+      }
+    }
+    return FREE_DAILY_REQUEST_LIMIT
   },
 
   async fetchDaily(symbol: string, options: FetchOptions = {}): Promise<MarketDataSet> {

@@ -14,9 +14,17 @@ async function ibmDataset() {
 }
 
 const ORIGINAL_API_KEY = process.env.ALPHA_VANTAGE_API_KEY
+const ORIGINAL_PREMIUM = process.env.ALPHA_VANTAGE_PREMIUM
+const ORIGINAL_DAILY_LIMIT = process.env.ALPHA_VANTAGE_DAILY_LIMIT
 afterEach(() => {
   if (ORIGINAL_API_KEY === undefined) delete process.env.ALPHA_VANTAGE_API_KEY
   else process.env.ALPHA_VANTAGE_API_KEY = ORIGINAL_API_KEY
+
+  if (ORIGINAL_PREMIUM === undefined) delete process.env.ALPHA_VANTAGE_PREMIUM
+  else process.env.ALPHA_VANTAGE_PREMIUM = ORIGINAL_PREMIUM
+
+  if (ORIGINAL_DAILY_LIMIT === undefined) delete process.env.ALPHA_VANTAGE_DAILY_LIMIT
+  else process.env.ALPHA_VANTAGE_DAILY_LIMIT = ORIGINAL_DAILY_LIMIT
 })
 
 describe('parseAlphaVantageDaily', () => {
@@ -250,9 +258,37 @@ describe('alphaVantage — free vs premium endpoint', () => {
 
   it('declares the free-key daily cap, and no cap with ALPHA_VANTAGE_PREMIUM=true', () => {
     delete process.env.ALPHA_VANTAGE_PREMIUM
+    delete process.env.ALPHA_VANTAGE_DAILY_LIMIT
     expect(alphaVantage.dailyRequestLimit?.()).toBe(FREE_DAILY_REQUEST_LIMIT)
     expect(FREE_DAILY_REQUEST_LIMIT).toBe(25)
     process.env.ALPHA_VANTAGE_PREMIUM = 'true'
+    expect(alphaVantage.dailyRequestLimit?.()).toBeUndefined()
+  })
+
+  it('allows ALPHA_VANTAGE_DAILY_LIMIT to override the free-key daily cap with a positive integer', () => {
+    delete process.env.ALPHA_VANTAGE_PREMIUM
+    process.env.ALPHA_VANTAGE_DAILY_LIMIT = '50'
+    expect(alphaVantage.dailyRequestLimit?.()).toBe(50)
+
+    process.env.ALPHA_VANTAGE_DAILY_LIMIT = ' 100 '
+    expect(alphaVantage.dailyRequestLimit?.()).toBe(100)
+
+    process.env.ALPHA_VANTAGE_DAILY_LIMIT = '1'
+    expect(alphaVantage.dailyRequestLimit?.()).toBe(1)
+  })
+
+  it('ignores invalid ALPHA_VANTAGE_DAILY_LIMIT values and keeps the default cap', () => {
+    delete process.env.ALPHA_VANTAGE_PREMIUM
+    const invalidValues = ['', '   ', '0', '-5', 'abc', '12.5', '25abc']
+    for (const val of invalidValues) {
+      process.env.ALPHA_VANTAGE_DAILY_LIMIT = val
+      expect(alphaVantage.dailyRequestLimit?.()).toBe(FREE_DAILY_REQUEST_LIMIT)
+    }
+  })
+
+  it('keeps no cap with ALPHA_VANTAGE_PREMIUM=true even when ALPHA_VANTAGE_DAILY_LIMIT is set', () => {
+    process.env.ALPHA_VANTAGE_PREMIUM = 'true'
+    process.env.ALPHA_VANTAGE_DAILY_LIMIT = '50'
     expect(alphaVantage.dailyRequestLimit?.()).toBeUndefined()
   })
 })
