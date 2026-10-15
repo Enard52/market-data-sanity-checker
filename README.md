@@ -120,6 +120,7 @@ mdsc compare --files yahoo-aapl.json,stooq-aapl.csv
 
 # machine-readable report
 mdsc check --file aapl.json --format json > report.json
+mdsc check --file aapl.json --format markdown
 
 # provider status and rule catalog
 mdsc providers

@@ -519,7 +519,7 @@ describe('compare — error paths and exit codes', () => {
     const result = await runCli(['compare', '--files', 'a.csv,b.csv', '--format', 'bogus'])
     expect(result.code).toBe(2)
     expect(result.stdout).toBe('')
-    expect(result.stderr).toContain('--format must be one of: table, json')
+    expect(result.stderr).toContain('--format must be one of: table, json, markdown')
   })
 
   it('exits 2 on invalid --fail-on and keeps stdout empty', async () => {
@@ -543,6 +543,26 @@ describe('compare — error paths and exit codes', () => {
     expect(result.stdout).toContain('consistency_score')
     const report = JSON.parse(result.stdout) as { consistency_score?: number }
     expect(report.consistency_score).toBe(100)
+  })
+
+  it('renders markdown table on compare --files with --format markdown', async () => {
+    const validFile = fixture('ohlcv-valid.csv')
+    const result = await runCli(['compare', '--files', `${validFile},${validFile}`, '--format', 'markdown'])
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('consistency_score: 100/100')
+    expect(result.stdout).toContain('No findings.')
+  })
+
+  it('renders markdown table on check --file with --format markdown (with findings and when clean)', async () => {
+    const cleanResult = await runCli(['check', '--file', fixture('ge-reverse-split.json'), '--format', 'markdown'])
+    expect(cleanResult.code).toBe(0)
+    expect(cleanResult.stdout).toContain('sanity_score: 100/100')
+    expect(cleanResult.stdout).toContain('No findings.')
+
+    const findingsResult = await runCli(['check', '--file', fixture('berkshire-bad-tick.json'), '--format', 'markdown'])
+    expect(findingsResult.code).toBe(1)
+    expect(findingsResult.stdout).toContain('| Rule | Severity | Date | Explanation |')
+    expect(findingsResult.stdout).toContain('PRICE_SPIKE_INTRADAY')
   })
 })
 
