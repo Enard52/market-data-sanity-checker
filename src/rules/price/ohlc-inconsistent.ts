@@ -17,7 +17,10 @@ export const ohlcInconsistent: Rule = {
     dimension: 'validity',
     description: 'high < low, or open/close outside the [low, high] range',
     defaultParams: {},
-    references: ['https://ranaroussi.github.io/yfinance/advanced/price_repair.html'],
+    references: [
+      'https://ranaroussi.github.io/yfinance/advanced/price_repair.html',
+      'https://github.com/ranaroussi/yfinance/issues/2857',
+    ],
   },
 
   check(data, context) {

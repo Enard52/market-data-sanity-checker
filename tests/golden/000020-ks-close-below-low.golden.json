@@ -1,0 +1,8 @@
+{
+  "fixture": "000020-ks-close-below-low.json",
+  "sanity_score": 45,
+  "findings": [
+    { "rule": "OHLC_INCONSISTENT", "severity": "critical", "action": "block", "where": { "date": "2024-01-15" } },
+    { "rule": "INSUFFICIENT_DATA", "severity": "warning", "action": "flag", "where": null }
+  ]
+}
