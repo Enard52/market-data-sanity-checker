@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { barMissing } from '../../src/rules/price/bar-missing'
+import { insufficientData } from '../../src/rules/price/insufficient-data'
 import { stalePrice } from '../../src/rules/price/stale-price'
 import type { Rule, RuleContext } from '../../src/rules/types'
 import type { MarketDataSet } from '../../src/schema/market-data'
@@ -225,5 +226,48 @@ describe('STALE_PRICE', () => {
         ctx,
       ),
     ).toEqual([])
+  })
+})
+
+describe('INSUFFICIENT_DATA', () => {
+  const ctx = ctxFor(insufficientData)
+  const nBars = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      timestamp: new Date(Date.UTC(2024, 0, 1 + i)).toISOString().slice(0, 10),
+      close: 100 + i,
+    }))
+
+  it('flags 0 bars with critical severity and bars: 0 evidence', () => {
+    const findings = insufficientData.check(makeDataSet([]), ctx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]!.rule).toBe('INSUFFICIENT_DATA')
+    expect(findings[0]!.severity).toBe('critical')
+    expect(findings[0]!.action).toBe('flag')
+    expect(findings[0]!.dimension).toBe('completeness')
+    expect(findings[0]!.evidence).toEqual({ bars: 0, min_bars: 10 })
+    expect(findings[0]!.explanation).toMatch(/no bars at all/)
+  })
+
+  it('flags 9 bars with warning severity and bars: 9 evidence', () => {
+    const findings = insufficientData.check(makeDataSet(nBars(9)), ctx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]!.rule).toBe('INSUFFICIENT_DATA')
+    expect(findings[0]!.severity).toBe('warning')
+    expect(findings[0]!.action).toBe('flag')
+    expect(findings[0]!.dimension).toBe('completeness')
+    expect(findings[0]!.evidence).toEqual({ bars: 9, min_bars: 10 })
+    expect(findings[0]!.explanation).toMatch(/Only 9 bar\(s\) provided/)
+  })
+
+  it('returns [] on exactly 10 bars (count >= minBars threshold edge)', () => {
+    expect(insufficientData.check(makeDataSet(nBars(10)), ctx)).toEqual([])
+  })
+
+  it('returns [] on 3 bars when configured with minBars: 3', () => {
+    const custom = {
+      ...ctx,
+      config: { ...ctx.config, params: { ...ctx.config.params, minBars: 3 } },
+    }
+    expect(insufficientData.check(makeDataSet(nBars(3)), custom)).toEqual([])
   })
 })
