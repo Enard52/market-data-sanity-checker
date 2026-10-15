@@ -116,6 +116,36 @@ describe('BAR_ON_WEEKEND', () => {
     expect(findings).toHaveLength(0)
   })
 
+  it('flags a 2025-02-01 Saturday bar on non-NSE exchanges', () => {
+    const data: MarketDataSet = {
+      symbol: 'AAPL',
+      source: 'yahoo',
+      bars: [{ timestamp: '2025-02-01', open: 150, high: 155, low: 149, close: 152 }],
+    }
+    const findings = barOnWeekend.check(data, ctx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]!.rule).toBe('BAR_ON_WEEKEND')
+  })
+
+  it('flags NSE on 2025-02-01 when specialSessions is configured to 0', () => {
+    const customCtx: RuleContext = {
+      config: {
+        severity: 'info',
+        params: { ...barOnWeekend.meta.defaultParams, specialSessions: 0 },
+      },
+      profile: { returns: [], medianReturn: 0, madReturn: 0 },
+    }
+    const data: MarketDataSet = {
+      symbol: 'RELIANCE.NS',
+      exchange: 'NSE',
+      source: 'yahoo',
+      bars: [{ timestamp: '2025-02-01', open: 1205, high: 1220, low: 1200, close: 1215 }],
+    }
+    const findings = barOnWeekend.check(data, customCtx)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]!.rule).toBe('BAR_ON_WEEKEND')
+  })
+
   it('skips intraday bars and series (daily data only)', () => {
     // Intraday series with hours/minutes timestamps
     const intradayData = makeDataset([

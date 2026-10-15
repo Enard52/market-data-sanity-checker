@@ -1,0 +1,15 @@
+{
+  "symbol": "PETR4.SA",
+  "source": "yahoo",
+  "currency": "BRL",
+  "bars": [
+    {
+      "timestamp": "2022-01-09",
+      "open": 28.5,
+      "high": 29.0,
+      "low": 28.2,
+      "close": 28.8,
+      "volume": 50000000
+    }
+  ]
+}

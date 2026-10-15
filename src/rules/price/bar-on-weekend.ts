@@ -4,11 +4,6 @@ import type { Rule } from '../types'
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
 
-/**
- * Known special exchange sessions that occurred on a weekend (e.g. NSE India
- * Union Budget session on Saturday 2025-02-01).
- */
-const KNOWN_SPECIAL_SESSIONS = new Set<string>(['2025-02-01'])
 
 function hasNonMidnightTime(timestamp: string): boolean {
   if (/^\d{4}-\d{2}-\d{2}$/.test(timestamp)) return false
@@ -33,9 +28,9 @@ function isIntradaySeries(bars: readonly Bar[]): boolean {
 /**
  * BAR_ON_WEEKEND — flags a daily bar dated on a day the exchange does not trade.
  *
- * Usually caused by timezone or UTC conversion shifting an exchange session by
- * a day (e.g. Yahoo daily bars stamped at 22:00–23:00 UTC shifting a Monday bar
- * to Sunday, or Paris daily bars landing one day early in UTC).
+ * Usually caused by timezone or DST conversion shifting an exchange session by
+ * a day (e.g. Yahoo daily bars stamped at 22:00–23:00 of the previous day shifting
+ * a Monday bar to Sunday, or Paris daily bars landing one day early in UTC).
  *
  * Severity is `info` because special trading sessions occasionally occur on weekends
  * (e.g. India's Union Budget session on Saturday 2025-02-01).
@@ -62,6 +57,8 @@ export const barOnWeekend: Rule = {
       friday: 0,
       /** Weekday 6 = Saturday. 1 = non-trading, 0 = trading. */
       saturday: 1,
+      /** 1 = allow known exchange-specific special weekend sessions (e.g. NSE India Saturday Union Budget session 2025-02-01); 0 = flag all. */
+      specialSessions: 1,
     },
     references: [
       'https://github.com/ranaroussi/yfinance/blob/5cae563642b59f49adf6a04a5ad6744f8b0e084d/yfinance/utils.py#L902-L911',
@@ -88,13 +85,8 @@ export const barOnWeekend: Rule = {
       }
     }
 
-    // Support array override nonTradingDays: [0, 6] in direct context calls
-    if (Array.isArray(params.nonTradingDays)) {
-      nonTradingDays.clear()
-      for (const d of params.nonTradingDays) {
-        if (typeof d === 'number') nonTradingDays.add(d)
-      }
-    }
+    const isNse = data.exchange?.toUpperCase() === 'NSE' || data.symbol.endsWith('.NS') || data.symbol.endsWith('.BO')
+    const allowSpecialSessions = params.specialSessions === 1 || params.specialSessions === true
 
     const findings: Finding[] = []
 
@@ -109,7 +101,7 @@ export const barOnWeekend: Rule = {
       const dateIso = date.toISOString().slice(0, 10)
 
       // Negative control: special exchange sessions (e.g. NSE India 2025-02-01)
-      if (KNOWN_SPECIAL_SESSIONS.has(dateIso)) continue
+      if (allowSpecialSessions && isNse && dateIso === '2025-02-01') continue
 
       if (!nonTradingDays.has(dayOfWeek)) continue
 
@@ -123,7 +115,7 @@ export const barOnWeekend: Rule = {
         explanation:
           `Daily bar dated on a non-trading weekday (${dayName}, ${bar.timestamp}). ` +
           `Hypothesis: a timezone or UTC conversion shifted a regular trading day into the weekend ` +
-          `(e.g. Yahoo daily bars stamped at 22:00–23:00 UTC shifting a Monday bar to Sunday, or Paris daily bars ` +
+          `(e.g. Yahoo daily bars stamped at 22:00–23:00 of the previous day shifting a Monday bar to Sunday, or Paris daily bars ` +
           `landing early in UTC), or an unannounced special weekend session. Review before consuming.`,
         evidence: {
           date: bar.timestamp,
