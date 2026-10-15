@@ -1,8 +1,8 @@
 # Examples — real defects, real output
 
 Every example below is reproducible: the inputs ship in [`tests/fixtures/`](../tests/fixtures/)
-(documented in [fixtures.md](fixtures.md)) and the outputs are the actual CLI text. No API key
-needed for any of them.
+and [`examples/`](../examples/) (documented in [fixtures.md](fixtures.md)) and the outputs are
+the actual CLI text. No API key needed for any of them.
 
 ## Golden path: local files to JSON and HTML
 
@@ -164,6 +164,24 @@ findings: 2 critical · 0 warning · 0 info
            Left side is UNKNOWN but right side is MOB.ST — these datasets describe different
            instruments, so every divergence below would be meaningless. ...
 ```
+
+### Truncated series: one source stops early
+
+Counting shared sessions can also hide a feed that was cut short at its tail: if the overlap is long enough, `INSUFFICIENT_OVERLAP` stays silent, but one feed is missing the most recent sessions that the other source has. `SERIES_TAIL_TRUNCATED` detects when one source ends two or more sessions before the other:
+
+```bash
+mdsc compare --files examples/aapl-authority.csv,examples/aapl-truncated.csv
+```
+
+```
+UNKNOWN — aapl-authority.csv vs aapl-truncated.csv — consistency_score: 85/100
+compared dates: 5 · only in aapl-authority.csv: 2 · only in aapl-truncated.csv: 0
+findings: 0 critical · 1 warning · 0 info
+  WARNING  SERIES_TAIL_TRUNCATED [2024-01-09] → flag
+           aapl-truncated.csv ends on 2024-01-08 for UNKNOWN, but aapl-authority.csv has 2 later session(s), from 2024-01-09 to 2024-01-10. The shared dates can agree while aapl-truncated.csv is missing its most recent bars: a truncated or stale fetch. Re-fetch aapl-truncated.csv before trusting it for the latest sessions.
+```
+
+The `minMissingSessions` setting configures the truncation threshold (default `2`, because a single missing latest session is often just "not published yet").
 
 ## 6. Live data and the HTML dashboard
 
