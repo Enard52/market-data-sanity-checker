@@ -93,6 +93,43 @@ describe('BAR_MISSING', () => {
     expect(findings).toEqual([])
   })
 
+  it('flags a 4-weekday gap when minMissingWeekdays is configured to 4', () => {
+    const custom = {
+      ...ctx,
+      config: { ...ctx.config, params: { ...barMissing.meta.defaultParams, minMissingWeekdays: 4 } },
+    }
+    const findings = barMissing.check(
+      makeDataSet([
+        { timestamp: '2024-01-05', close: 100 },
+        { timestamp: '2024-01-12', close: 101 },
+      ]),
+      custom,
+    )
+
+    expect(findings).toHaveLength(1)
+    expect(findings[0]!.rule).toBe('BAR_MISSING')
+    expect(findings[0]!.evidence).toMatchObject({
+      gap_weekdays: 4,
+      from: '2024-01-05',
+      to: '2024-01-12',
+    })
+  })
+
+  it('excuses a 5-weekday gap when minMissingWeekdays is configured to 6', () => {
+    const custom = {
+      ...ctx,
+      config: { ...ctx.config, params: { ...barMissing.meta.defaultParams, minMissingWeekdays: 6 } },
+    }
+    const findings = barMissing.check(
+      makeDataSet([
+        { timestamp: '2024-01-05', close: 100 },
+        { timestamp: '2024-01-15', close: 101 },
+      ]),
+      custom,
+    )
+    expect(findings).toEqual([])
+  })
+
   it('returns [] on degenerate datasets', () => {
     expect(barMissing.check(makeDataSet([]), ctx)).toEqual([])
     expect(barMissing.check(makeDataSet([{ timestamp: '2024-01-02', close: 100 }]), ctx)).toEqual([])
