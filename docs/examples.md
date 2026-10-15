@@ -167,7 +167,11 @@ findings: 2 critical · 0 warning · 0 info
 
 ### Truncated series: one source stops early
 
-Counting shared sessions can also hide a feed that was cut short at its tail: if the overlap is long enough, `INSUFFICIENT_OVERLAP` stays silent, but one feed is missing the most recent sessions that the other source has. `SERIES_TAIL_TRUNCATED` detects when one source ends two or more sessions before the other:
+Counting shared sessions can also hide a feed that was cut short at its tail: if the overlap is long enough, `INSUFFICIENT_OVERLAP` stays silent, but one feed is missing the most recent sessions that the other source has. `SERIES_TAIL_TRUNCATED` detects when one source ends two or more sessions before the other.
+
+Both inputs are small **synthetic** files, catalogued under [Synthetic / structural](fixtures.md#synthetic--structural):
+their prices are made-up numbers, not real quotes for Apple or any other ticker, and neither file
+declares a symbol — which is why the report below prints `UNKNOWN`:
 
 ```bash
 mdsc compare --files examples/example-authority.csv,examples/example-truncated.csv
