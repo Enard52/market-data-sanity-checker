@@ -1,0 +1,15 @@
+{
+  "symbol": "000020.KS",
+  "source": "yahoo",
+  "currency": "KRW",
+  "bars": [
+    {
+      "timestamp": "2024-01-15",
+      "open": 9936.366819,
+      "high": 10022.853571,
+      "low": 9907.537902,
+      "close": 9878.708984,
+      "volume": 21185
+    }
+  ]
+}

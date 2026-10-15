@@ -2,7 +2,8 @@
  * Release notes in the house format, built from the version's CHANGELOG.md section
  * (written by changesets), and a check that a release body follows that format.
  *
- *   tsx scripts/release-notes.ts build <version>   → JSON { title, body } on stdout
+ *   tsx scripts/release-notes.ts build <version> [--github-notes <file>]   → JSON { title, body } on stdout
+ *     (the optional file is GitHub's generate-notes body; it adds "Also merged" and "New Contributors")
  *   tsx scripts/release-notes.ts check <file>      → exit 1 and one line per problem
  *
  * Format: "vX.Y.Z — <summary>" as the title; the body opens with a one-paragraph
@@ -39,6 +40,29 @@ export function changelogSection(changelog: string, version: string): string {
   return (end === -1 ? rest : rest.slice(0, end)).join('\n').trim()
 }
 
+/** Maintainers are not thanked in the notes (the plugin thanks the author of every changeset PR). */
+const MAINTAINERS = new Set(['pacocartones', 'leonmag'])
+
+/**
+ * Entries written by @changesets/changelog-github look like
+ *   [#112](url) [`abc1234`](url) Thanks [@user](url)! - Summary.
+ * Turn them into "Summary. ([#112](url)) Thanks @user." so the first sentence,
+ * the title and the contributors list keep working. Entries in any other shape
+ * pass through unchanged.
+ */
+export function normalizeEntry(entry: string): string {
+  const m = /^((?:\[[^\]]+\]\([^)]*\) ?)*)(?:Thanks ((?:\[@[^\]]+\]\([^)]*\)(?:, )?)+)! )?- ([\s\S]*)$/.exec(entry)
+  if (!m || (!m[1] && !m[2])) return entry
+  const pr = /\[#\d+\]\([^)]*\)/.exec(m[1] ?? '')?.[0]
+  const handles = [...(m[2] ?? '').matchAll(/\[@([A-Za-z0-9-]+)\]/g)]
+    .map((h) => h[1]!)
+    .filter((h) => !MAINTAINERS.has(h.toLowerCase()))
+  let out = m[3]!.trimEnd()
+  if (pr) out += ` (${pr})`
+  if (handles.length > 0) out += ` Thanks ${handles.map((h) => `@${h}`).join(', ')}.`
+  return out
+}
+
 /** Changeset entries grouped by their `### ... Changes` heading, commit prefixes removed. */
 function entriesByHeading(section: string): Map<string, string[]> {
   const groups = new Map<string, string[]>()
@@ -55,7 +79,7 @@ function entriesByHeading(section: string): Map<string, string[]> {
     if (line.startsWith('- ')) entries.push(line.slice(2).replace(/^[0-9a-f]{7,40}: /, ''))
     else if (entries.length > 0) entries[entries.length - 1] += `\n${line}`
   }
-  for (const [key, entries] of groups) groups.set(key, entries.map((entry) => entry.trimEnd()))
+  for (const [key, entries] of groups) groups.set(key, entries.map((entry) => normalizeEntry(entry.trimEnd())))
   return groups
 }
 
@@ -83,7 +107,36 @@ export function contributors(entries: string[]): string[] {
   return [...seen]
 }
 
-export function buildReleaseNotes(changelog: string, version: string): ReleaseNotes {
+export interface GithubNotes {
+  /** Merged pull requests by people (not bots, not maintainers), without "Version Packages". */
+  merged: { title: string; author: string; number: number }[]
+  /** People whose first contribution is in this release. */
+  firstTimers: { author: string; number: number }[]
+}
+
+/**
+ * Reads the body printed by GitHub's generate-notes API ("What's Changed" and
+ * "New Contributors" lists) and keeps what is needed to credit everyone, also
+ * the pull requests that have no changeset (docs, tests, fixtures).
+ */
+export function parseGithubNotes(body: string): GithubNotes {
+  const merged: GithubNotes['merged'] = []
+  const firstTimers: GithubNotes['firstTimers'] = []
+  for (const line of body.split('\n')) {
+    const pr = /^\* (.+) by @([A-Za-z0-9-]+(?:\[bot\])?) in \S+\/pull\/(\d+)\s*$/.exec(line)
+    if (pr) {
+      const [, title, author, number] = pr
+      if (author!.endsWith('[bot]') || MAINTAINERS.has(author!.toLowerCase()) || /^Version Packages$/i.test(title!)) continue
+      merged.push({ title: title!, author: author!, number: Number(number) })
+      continue
+    }
+    const first = /^\* @([A-Za-z0-9-]+) made their first contribution in \S+\/pull\/(\d+)\s*$/.exec(line)
+    if (first && !MAINTAINERS.has(first[1]!.toLowerCase())) firstTimers.push({ author: first[1]!, number: Number(first[2]) })
+  }
+  return { merged, firstTimers }
+}
+
+export function buildReleaseNotes(changelog: string, version: string, github?: GithubNotes): ReleaseNotes {
   const groups = entriesByHeading(changelogSection(changelog, version))
   const ordered = ['Major Changes', 'Minor Changes', 'Patch Changes'].filter((h) => (groups.get(h) ?? []).length > 0)
   if (ordered.length === 0) throw new Error(`the ${version} section has no changeset entries`)
@@ -97,8 +150,14 @@ export function buildReleaseNotes(changelog: string, version: string): ReleaseNo
   for (const heading of ordered) {
     parts.push(`### ${HEADINGS[heading]}\n\n${groups.get(heading)!.map((entry) => `- ${entry}`).join('\n')}`)
   }
-  const people = contributors(all)
+  if (github && github.merged.length > 0) {
+    parts.push(`### Also merged\n\n${github.merged.map((p) => `- ${p.title} (#${p.number}) by @${p.author}`).join('\n')}`)
+  }
+  const people = [...new Set([...contributors(all), ...(github?.merged ?? []).map((p) => `@${p.author}`)])]
   if (people.length > 0) parts.push(`### Contributors\n\nThank you ${people.join(', ')}.`)
+  if (github && github.firstTimers.length > 0) {
+    parts.push(`### New Contributors\n\n${github.firstTimers.map((p) => `- @${p.author} made their first contribution in #${p.number}`).join('\n')}`)
+  }
   parts.push(
     [
       '### Verify',
@@ -131,7 +190,9 @@ export function checkReleaseNotes(body: string, title?: string): string[] {
 function main(argv: string[]): number {
   const [command, arg, ...rest] = argv
   if (command === 'build' && arg) {
-    const notes = buildReleaseNotes(readFileSync('CHANGELOG.md', 'utf8'), arg.replace(/^v/, ''))
+    const ghIndex = rest.indexOf('--github-notes')
+    const github = ghIndex !== -1 && rest[ghIndex + 1] ? parseGithubNotes(readFileSync(rest[ghIndex + 1]!, 'utf8')) : undefined
+    const notes = buildReleaseNotes(readFileSync('CHANGELOG.md', 'utf8'), arg.replace(/^v/, ''), github)
     process.stdout.write(`${JSON.stringify(notes, null, 2)}\n`)
     return 0
   }
