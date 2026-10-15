@@ -532,4 +532,37 @@ describe('compare — error paths and exit codes', () => {
     const report = JSON.parse(result.stdout) as { consistency_score?: number }
     expect(report.consistency_score).toBe(100)
   })
+
+  it('exits 2 on invalid --format for providers', async () => {
+    const result = await runCli(['providers', '--format', 'bogus'])
+    expect(result.code).toBe(2)
+    expect(result.stdout).toBe('')
+    expect(result.stderr).toContain('--format must be one of: table, json')
+  })
+
+  it('prints table by default with cap details for providers', async () => {
+    const result = await runCli(['providers'])
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('yahoo')
+    expect(result.stdout).toContain('alpha-vantage')
+    expect(result.stdout).toContain('25 requests/day (free key)')
+  })
+
+  it('prints json array with --format json for providers, including daily_request_limit', async () => {
+    const result = await runCli(['providers', '--format', 'json'])
+    expect(result.code).toBe(0)
+    const list = JSON.parse(result.stdout) as Array<{
+      name: string
+      available: boolean
+      requires: string
+      daily_request_limit: number | null
+    }>
+    expect(Array.isArray(list)).toBe(true)
+    const yahooEntry = list.find((entry) => entry.name === 'yahoo')
+    const avEntry = list.find((entry) => entry.name === 'alpha-vantage')
+    expect(yahooEntry).toBeDefined()
+    expect(yahooEntry?.daily_request_limit).toBeNull()
+    expect(avEntry).toBeDefined()
+    expect(avEntry?.daily_request_limit).toBe(25)
+  })
 })

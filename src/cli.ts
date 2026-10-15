@@ -530,10 +530,26 @@ program
 program
   .command('providers')
   .description('List available data providers and their status')
-  .action(() => {
+  .option('--format <format>', 'output format: table | json', 'table')
+  .action((options: { format: string }) => {
+    const format = options.format.toLowerCase()
+    if (format !== 'table' && format !== 'json') {
+      console.error('mdsc: --format must be one of: table, json')
+      process.exitCode = 2
+      return
+    }
+
+    const statuses = connectorStatus()
+    if (format === 'json') {
+      console.log(JSON.stringify(statuses, null, 2))
+      return
+    }
+
     console.log()
-    for (const status of connectorStatus()) {
-      console.log(`  ${status.name.padEnd(16)} ${status.available ? 'ready' : `unavailable — requires ${status.requires}`}`)
+    for (const status of statuses) {
+      const details = status.available ? 'ready' : `unavailable — requires ${status.requires}`
+      const cap = status.daily_request_limit !== null ? ` · ${status.daily_request_limit} requests/day (free key)` : ''
+      console.log(`  ${status.name.padEnd(16)} ${details}${cap}`)
     }
     console.log()
   })

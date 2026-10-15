@@ -13,12 +13,20 @@ export const connectors: Record<string, Connector> = {
   'alpha-vantage': alphaVantage,
 }
 
+export interface ConnectorStatus {
+  name: string
+  available: boolean
+  requires: string
+  daily_request_limit: number | null
+}
+
 /** Lists provider names with whether they are usable right now. */
-export function connectorStatus(): Array<{ name: string; available: boolean; requires: string }> {
+export function connectorStatus(): ConnectorStatus[] {
   return Object.values(connectors).map((connector) => ({
     name: connector.name,
     available: connector.available(),
     requires: connector.requires,
+    daily_request_limit: connector.dailyRequestLimit?.() ?? null,
   }))
 }
 

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { alphaVantage, FREE_DAILY_REQUEST_LIMIT, parseAlphaVantageDaily } from '../src/connectors/alphavantage'
+import { connectorStatus } from '../src/connectors/index'
 import { ConnectorError, DEFAULT_TIMEOUT_MS, splitByDailyLimit } from '../src/connectors/types'
 import { marketDataSetSchema } from '../src/schema/market-data'
 
@@ -275,5 +276,19 @@ describe('splitByDailyLimit', () => {
     const { attempt, skip } = splitByDailyLimit(basket, FREE_DAILY_REQUEST_LIMIT)
     expect(attempt).toHaveLength(25)
     expect(skip).toEqual(['S25', 'S26', 'S27', 'S28', 'S29'])
+  })
+})
+
+describe('connectorStatus', () => {
+  it('returns status objects for all registered connectors with daily request caps', () => {
+    delete process.env.ALPHA_VANTAGE_PREMIUM
+    delete process.env.ALPHA_VANTAGE_DAILY_LIMIT
+    const list = connectorStatus()
+    const yahoo = list.find((c) => c.name === 'yahoo')
+    const av = list.find((c) => c.name === 'alpha-vantage')
+    expect(yahoo).toBeDefined()
+    expect(yahoo?.daily_request_limit).toBeNull()
+    expect(av).toBeDefined()
+    expect(av?.daily_request_limit).toBe(FREE_DAILY_REQUEST_LIMIT)
   })
 })
