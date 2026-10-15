@@ -170,18 +170,28 @@ findings: 2 critical · 0 warning · 0 info
 Counting shared sessions can also hide a feed that was cut short at its tail: if the overlap is long enough, `INSUFFICIENT_OVERLAP` stays silent, but one feed is missing the most recent sessions that the other source has. `SERIES_TAIL_TRUNCATED` detects when one source ends two or more sessions before the other:
 
 ```bash
-mdsc compare --files examples/aapl-authority.csv,examples/aapl-truncated.csv
+mdsc compare --files examples/example-authority.csv,examples/example-truncated.csv
 ```
 
 ```
-UNKNOWN — aapl-authority.csv vs aapl-truncated.csv — consistency_score: 85/100
-compared dates: 5 · only in aapl-authority.csv: 2 · only in aapl-truncated.csv: 0
+UNKNOWN — example-authority.csv vs example-truncated.csv — consistency_score: 85/100
+compared dates: 5 · only in example-authority.csv: 2 · only in example-truncated.csv: 0
 findings: 0 critical · 1 warning · 0 info
   WARNING  SERIES_TAIL_TRUNCATED [2024-01-09] → flag
-           aapl-truncated.csv ends on 2024-01-08 for UNKNOWN, but aapl-authority.csv has 2 later session(s), from 2024-01-09 to 2024-01-10. The shared dates can agree while aapl-truncated.csv is missing its most recent bars: a truncated or stale fetch. Re-fetch aapl-truncated.csv before trusting it for the latest sessions.
+           example-truncated.csv ends on 2024-01-08 for UNKNOWN, but example-authority.csv has 2 later session(s), from 2024-01-09 to 2024-01-10. The shared dates can agree while example-truncated.csv is missing its most recent bars: a truncated or stale fetch. Re-fetch example-truncated.csv before trusting it for the latest sessions.
 ```
 
-The `minMissingSessions` setting configures the truncation threshold (default `2`, because a single missing latest session is often just "not published yet").
+The `minMissingSessions` setting configures the truncation threshold (default `2`, because a single missing latest session is often just "not published yet"). You can override it in `mdsc.config.json`:
+
+```json
+{
+  "rules": {
+    "SERIES_TAIL_TRUNCATED": {
+      "minMissingSessions": 3
+    }
+  }
+}
+```
 
 ## 6. Live data and the HTML dashboard
 

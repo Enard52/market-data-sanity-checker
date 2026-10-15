@@ -54,6 +54,7 @@ Adding a rule? Add its fixture first — the contract is: no real-world case, no
 |---|---|
 | `ohlcv-valid.csv` / `ohlcv-missing-columns.csv` | CSV ingestion contract (header aliases, required columns) |
 | `ohlcv-zero-volume-moved.csv` | Runnable example for ZERO_VOLUME_MOVED (intraday price movement with zero volume) |
+| `examples/example-authority.csv` / `examples/example-truncated.csv` | Runnable example for SERIES_TAIL_TRUNCATED (one source truncated early at its tail) |
 | `bars-array.json` | Bare-array JSON ingestion; also anchors the degraded `CURRENCY_SUSPECT` info case (currency absent) |
 
 ## Connector payloads
