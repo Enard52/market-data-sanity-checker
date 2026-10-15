@@ -34,6 +34,11 @@ function isIntradaySeries(bars: readonly Bar[]): boolean {
  *
  * Severity is `info` because special trading sessions occasionally occur on weekends
  * (e.g. India's Union Budget session on Saturday 2025-02-01).
+ *
+ * What it does not see: bars with a time of day are skipped; the rule reads daily,
+ * date-only bars. A raw Yahoo bar stamped at 22:00–23:00 of the previous day is
+ * therefore only caught once it has been reduced to a date (as the connector does),
+ * and a single timed bar makes the whole series read as intraday and returns nothing.
  */
 export const barOnWeekend: Rule = {
   meta: {

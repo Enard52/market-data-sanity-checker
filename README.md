@@ -307,7 +307,7 @@ compare rules. Full details with defaults and references: `mdsc rules` (or
 | `CURRENCY_SCALE_SUSPECT` | warning | Persistent ~100× level shifts — pence/pounds (GBX/GBP) block confusion |
 | `STALE_PRICE` | warning | Identical close for 3+ sessions with volume — frozen feed (`info` when the price is frozen with volume 0 for more than 10 sessions) |
 | `BAR_MISSING` | warning | Gaps of a full trading week or more |
-| `BAR_ON_WEEKEND` | info | Daily bar dated on a non-trading weekday (usually a timezone shift) |
+| `BAR_ON_WEEKEND` | info | Daily bar dated on a non-trading weekday (usually a timezone shift). Bars with a time of day are skipped; the rule reads daily, date-only bars |
 | `TS_UNORDERED` | warning | Bars out of chronological order |
 | `ZERO_VOLUME_MOVED` | warning | Zero volume but price moved intraday |
 | `INSUFFICIENT_DATA` | warning | Too few bars to evaluate plausibility — the score reflects absence of evidence |
