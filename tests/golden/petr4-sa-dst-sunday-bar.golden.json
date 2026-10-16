@@ -1,0 +1,7 @@
+{
+  "fixture": "petr4-sa-dst-sunday-bar.json",
+  "sanity_score": 95,
+  "findings": [
+    { "rule": "BAR_ON_WEEKEND", "severity": "info", "action": "review", "where": { "date": "2022-01-09" } }
+  ]
+}

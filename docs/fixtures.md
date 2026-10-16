@@ -55,6 +55,7 @@ Adding a rule? Add its fixture first — the contract is: no real-world case, no
 | `ohlcv-valid.csv` / `ohlcv-missing-columns.csv` | CSV ingestion contract (header aliases, required columns) |
 | `ohlcv-zero-volume-moved.csv` | Runnable example for ZERO_VOLUME_MOVED (intraday price movement with zero volume) |
 | `bars-array.json` | Bare-array JSON ingestion; also anchors the degraded `CURRENCY_SUSPECT` info case (currency absent) |
+| `petr4-sa-dst-sunday-bar.json` | **Not real data.** A minimal synthetic reproduction of the shape described in yfinance [`fix_Yahoo_dst_issue`](https://github.com/ranaroussi/yfinance/blob/5cae563642b59f49adf6a04a5ad6744f8b0e084d/yfinance/utils.py#L902-L911) ("Yahoo has time off by few hours (e.g. Brazil 23:00 around Jan-2022)"): 24 invented ordinary Monday–Friday bars plus one Sunday-dated bar (`2022-01-09`). No price, volume or date was taken from PETR4.SA; the filename records the case it imitates, not its provenance. Anchors `BAR_ON_WEEKEND` with a golden that isolates it |
 
 ## Connector payloads
 
