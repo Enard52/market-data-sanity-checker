@@ -90,9 +90,9 @@ describe('robustness: the engine never crashes', () => {
     })
   }
 
-  it('corpus has 29 rules registered (phases 1+2+4+5)', () => {
-    expect(registry).toHaveLength(29)
-    expect(new Set(registry.map((rule) => rule.meta.id)).size).toBe(29)
+  it('corpus has 30 rules registered (phases 1+2+4+5)', () => {
+    expect(registry).toHaveLength(30)
+    expect(new Set(registry.map((rule) => rule.meta.id)).size).toBe(30)
   })
 
   it('disabling every rule yields zero findings', () => {

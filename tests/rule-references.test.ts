@@ -12,7 +12,7 @@ describe('rule references', () => {
   ]
 
   it('covers the whole catalog', () => {
-    expect(all.length).toBe(37)
+    expect(all.length).toBe(38)
   })
 
   it.each(all)('$id cites at least one http(s) reference', ({ references }) => {
