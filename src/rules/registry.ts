@@ -9,6 +9,7 @@ import { zeroVolumeMoved } from './price/zero-volume-moved'
 import { tsDuplicated } from './price/ts-duplicated'
 import { tsUnordered } from './price/ts-unordered'
 import { barMissing } from './price/bar-missing'
+import { barOnWeekend } from './price/bar-on-weekend'
 import { priceSpikeIntraday } from './price/price-spike-intraday'
 import { stalePrice } from './price/stale-price'
 import { currencyScaleSuspect } from './price/currency-scale-suspect'
@@ -46,6 +47,7 @@ export const registry: Rule[] = [
   tsDuplicated,
   tsUnordered,
   barMissing,
+  barOnWeekend,
   stalePrice,
   currencyScaleSuspect,
   // corporate actions

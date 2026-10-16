@@ -14,6 +14,7 @@ import { compareRegistry } from './compare/registry'
 import { connectorStatus, getConnector } from './connectors/index'
 import { loadConfig, type MdscConfig } from './config'
 import { renderCheckHtml, renderCompareHtml } from './report/html'
+import { renderReportMarkdown, renderCompareMarkdown } from './report/markdown'
 import {
   appendHistory,
   readHistory,
@@ -187,8 +188,8 @@ function validateCommonFlags(options: GatingOptions & { format: string }): numbe
     }
   }
   const format = options.format.toLowerCase()
-  if (format !== 'table' && format !== 'json') {
-    console.error('mdsc: --format must be one of: table, json')
+  if (format !== 'table' && format !== 'json' && format !== 'markdown') {
+    console.error('mdsc: --format must be one of: table, json, markdown')
     return 2
   }
   return null
@@ -224,7 +225,7 @@ program
   .option('--symbol <symbol>', 'symbol to fetch (required with --provider) or override for files')
   .option('--range <range>', 'history range for providers, e.g. 1mo, 1y, 5y', '1y')
   .option('--source <source>', 'data source name for provenance (files only)')
-  .option('--format <format>', 'output format: table | json', 'table')
+  .option('--format <format>', 'output format: table | json | markdown', 'table')
   .option('--config <path>', 'path to a config file (default: ./mdsc.config.json if present)')
   .option('--fail-on <severity>', 'exit 1 on findings at or above: critical | warning | info')
   .option('--min-score <n>', 'exit 1 when the sanity_score is below n (0-100)')
@@ -286,6 +287,8 @@ program
         : undefined
       if (format === 'json') {
         console.log(JSON.stringify(report, null, 2))
+      } else if (format === 'markdown') {
+        console.log(renderReportMarkdown(report))
       } else {
         printTable(report, coverage)
       }
@@ -317,7 +320,7 @@ program
   .option('--providers <a,b>', 'two providers, e.g. yahoo,alpha-vantage')
   .option('--files <a,b>', 'two local files (.csv/.json) to compare')
   .option('--range <range>', 'history range for providers, e.g. 1mo, 1y, 5y', '1y')
-  .option('--format <format>', 'output format: table | json', 'table')
+  .option('--format <format>', 'output format: table | json | markdown', 'table')
   .option('--config <path>', 'path to a config file (default: ./mdsc.config.json if present)')
   .option('--fail-on <severity>', 'exit 1 on findings at or above: critical | warning | info')
   .option('--min-score <n>', 'exit 1 when the consistency_score is below n (0-100)')
@@ -374,6 +377,8 @@ program
       const report = compareDatasets(a, b, config.compare)
       if (format === 'json') {
         console.log(JSON.stringify(report, null, 2))
+      } else if (format === 'markdown') {
+        console.log(renderCompareMarkdown(report))
       } else {
         printComparison(report)
       }
