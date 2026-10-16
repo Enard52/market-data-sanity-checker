@@ -38,6 +38,7 @@ export type { Connector, ConnectorStatus, FetchOptions } from './connectors/inde
 export { computeSanityScore, summarize, SEVERITY_PENALTY } from './scoring/score'
 
 export { renderCheckHtml, renderCompareHtml } from './report/html'
+export { renderReportMarkdown, renderCompareMarkdown } from './report/markdown'
 
 export {
   appendHistory,

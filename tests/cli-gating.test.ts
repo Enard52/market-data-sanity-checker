@@ -519,7 +519,7 @@ describe('compare — error paths and exit codes', () => {
     const result = await runCli(['compare', '--files', 'a.csv,b.csv', '--format', 'bogus'])
     expect(result.code).toBe(2)
     expect(result.stdout).toBe('')
-    expect(result.stderr).toContain('--format must be one of: table, json')
+    expect(result.stderr).toContain('--format must be one of: table, json, markdown')
   })
 
   it('exits 2 on invalid --fail-on and keeps stdout empty', async () => {
@@ -543,6 +543,39 @@ describe('compare — error paths and exit codes', () => {
     expect(result.stdout).toContain('consistency_score')
     const report = JSON.parse(result.stdout) as { consistency_score?: number }
     expect(report.consistency_score).toBe(100)
+  })
+
+  it('renders markdown table on compare --files with --format markdown', async () => {
+    const validFile = fixture('ohlcv-valid.csv')
+    const result = await runCli(['compare', '--files', `${validFile},${validFile}`, '--format', 'markdown'])
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('consistency_score: 100/100')
+    expect(result.stdout).toContain('No findings.')
+  })
+
+  it('renders markdown table on check --file with --format markdown (with findings and when clean)', async () => {
+    const cleanResult = await runCli(['check', '--file', fixture('ge-reverse-split.json'), '--format', 'markdown'])
+    expect(cleanResult.code).toBe(0)
+    expect(cleanResult.stdout).toContain('sanity_score: 100/100')
+    expect(cleanResult.stdout).toContain('No findings.')
+
+    const findingsResult = await runCli(['check', '--file', fixture('berkshire-bad-tick.json'), '--format', 'markdown'])
+    expect(findingsResult.code).toBe(1)
+    expect(findingsResult.stdout).toContain('| Rule | Severity | Date | Explanation |')
+    expect(findingsResult.stdout).toContain('PRICE_SPIKE_INTRADAY')
+  })
+
+  it('keeps a hostile --symbol inside the markdown heading line', async () => {
+    // The reproduction from the review of #200: --symbol reaches the heading verbatim
+    // and the output is read as markdown in a PR comment or GITHUB_STEP_SUMMARY. The
+    // csv fixture carries no symbol, so the override is the one that is rendered.
+    const hostile = 'AAPL\n\n[free prize](https://evil.example) <img src=x onerror=alert(1)>'
+    const result = await runCli(['check', '--file', fixture('ohlcv-valid.csv'), '--symbol', hostile, '--format', 'markdown'])
+    expect(result.code).toBe(0)
+    // one heading line, break collapsed to a space, markdown and html punctuation escaped
+    expect(result.stdout.split('\n')[0]).toBe(
+      '## AAPL \\[free prize\\](https://evil.example) \\<img src=x onerror=alert(1)\\> (csv) — sanity_score: 80/100',
+    )
   })
 })
 
