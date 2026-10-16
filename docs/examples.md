@@ -1,8 +1,8 @@
 # Examples — real defects, real output
 
 Every example below is reproducible: the inputs ship in [`tests/fixtures/`](../tests/fixtures/)
-(documented in [fixtures.md](fixtures.md)) and the outputs are the actual CLI text. No API key
-needed for any of them.
+and [`examples/`](../examples/) (documented in [fixtures.md](fixtures.md)) and the outputs are
+the actual CLI text. No API key needed for any of them.
 
 ## Golden path: local files to JSON and HTML
 
@@ -164,6 +164,40 @@ findings: 2 critical · 0 warning · 0 info
            Left side is UNKNOWN but right side is MOB.ST — these datasets describe different
            instruments, so every divergence below would be meaningless. ...
 ```
+
+### Truncated series: one source stops early
+
+Counting shared sessions can also hide a feed that was cut short at its tail: if the overlap is long enough, `INSUFFICIENT_OVERLAP` stays silent, but one feed is missing the most recent sessions that the other source has. `SERIES_TAIL_TRUNCATED` detects when one source ends two or more sessions before the other.
+
+Both inputs are small **synthetic** files, catalogued under [Synthetic / structural](fixtures.md#synthetic--structural):
+their prices are made-up numbers, not real quotes for Apple or any other ticker, and neither file
+declares a symbol — which is why the report below prints `UNKNOWN`:
+
+```bash
+mdsc compare --files examples/example-authority.csv,examples/example-truncated.csv
+```
+
+```
+UNKNOWN — example-authority.csv vs example-truncated.csv — consistency_score: 85/100
+compared dates: 5 · only in example-authority.csv: 2 · only in example-truncated.csv: 0
+findings: 0 critical · 1 warning · 0 info
+  WARNING  SERIES_TAIL_TRUNCATED [2024-01-09] → flag
+           example-truncated.csv ends on 2024-01-08 for UNKNOWN, but example-authority.csv has 2 later session(s), from 2024-01-09 to 2024-01-10. The shared dates can agree while example-truncated.csv is missing its most recent bars: a truncated or stale fetch. Re-fetch example-truncated.csv before trusting it for the latest sessions.
+```
+
+The `minMissingSessions` setting configures the truncation threshold (default `2`, because a single missing latest session is often just "not published yet"). This is a compare rule, so its override lives under `compareRules`, and the threshold goes inside `params`:
+
+```json
+{
+  "compareRules": {
+    "SERIES_TAIL_TRUNCATED": {
+      "params": { "minMissingSessions": 3 }
+    }
+  }
+}
+```
+
+Both nesting levels are load-bearing: `rules` is matched against the single-source catalog only, so a compare rule id there fails with `Unknown rule id`, and a rule override accepts only `enabled`, `severity` and `params`, so a threshold written next to the rule id parses but is dropped and changes nothing. With `minMissingSessions: 3` the pair above stops reporting the finding — its tail is only 2 sessions short — and scores 100/100. The file is read from the working directory unless you pass `--config <path>`; the general shape is in [README — Configuration](../README.md#configuration-mdscconfigjson).
 
 ## 6. Live data and the HTML dashboard
 
